@@ -1,0 +1,27 @@
+# Downloaded by setup.sh — do not commit
+ontop-cli/
+ontop/jdbc/*.jar
+
+# Generated database files
+university.ddb
+*.ddb
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment / secrets (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+log/

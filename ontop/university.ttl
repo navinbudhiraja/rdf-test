@@ -1,0 +1,61 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix voc:  <http://example.org/voc#> .
+
+<http://example.org/university-ontology> a owl:Ontology .
+
+#-- Classes --
+
+voc:Person a owl:Class .
+
+voc:Student a owl:Class ;
+    rdfs:subClassOf voc:Person .
+
+voc:AcademicMember a owl:Class ;
+    rdfs:subClassOf voc:Person .
+
+voc:FullProfessor a owl:Class ;
+    rdfs:subClassOf voc:AcademicMember .
+
+voc:AssociateProfessor a owl:Class ;
+    rdfs:subClassOf voc:AcademicMember .
+
+voc:AssistantProfessor a owl:Class ;
+    rdfs:subClassOf voc:AcademicMember .
+
+voc:PostDoc a owl:Class ;
+    rdfs:subClassOf voc:AcademicMember .
+
+voc:Course a owl:Class .
+
+#-- Data properties --
+
+foaf:firstName a owl:DatatypeProperty ;
+    rdfs:domain voc:Person ;
+    rdfs:range  xsd:string .
+
+foaf:lastName a owl:DatatypeProperty ;
+    rdfs:domain voc:Person ;
+    rdfs:range  xsd:string .
+
+voc:courseTitle a owl:DatatypeProperty ;
+    rdfs:domain voc:Course ;
+    rdfs:range  xsd:string .
+
+#-- Object properties --
+
+voc:teaches a owl:ObjectProperty ;
+    rdfs:domain voc:AcademicMember ;
+    rdfs:range  voc:Course .
+
+voc:isEnrolledIn a owl:ObjectProperty ;
+    rdfs:domain voc:Student ;
+    rdfs:range  voc:Course .
+
+voc:isTaughtBy a owl:ObjectProperty ;
+    owl:inverseOf voc:teaches ;
+    rdfs:domain voc:Course ;
+    rdfs:range  voc:AcademicMember .

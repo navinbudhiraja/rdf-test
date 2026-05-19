@@ -1,0 +1,64 @@
+[PrefixDeclaration]
+:        http://example.org/university#
+voc:     http://example.org/voc#
+foaf:    http://xmlns.com/foaf/0.1/
+rdf:     http://www.w3.org/1999/02/22-rdf-syntax-ns#
+rdfs:    http://www.w3.org/2000/01/rdf-schema#
+owl:     http://www.w3.org/2002/07/owl#
+xsd:     http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId student-type
+source    SELECT s_id FROM student
+target    :student/{s_id} a voc:Student .
+
+mappingId student-firstName
+source    SELECT s_id, fname FROM student
+target    :student/{s_id} foaf:firstName {fname}^^xsd:string .
+
+mappingId student-lastName
+source    SELECT s_id, lname FROM student
+target    :student/{s_id} foaf:lastName {lname}^^xsd:string .
+
+mappingId full-professor-type
+source    SELECT a_id FROM academic WHERE position = 1
+target    :academic/{a_id} a voc:FullProfessor .
+
+mappingId associate-professor-type
+source    SELECT a_id FROM academic WHERE position = 2
+target    :academic/{a_id} a voc:AssociateProfessor .
+
+mappingId assistant-professor-type
+source    SELECT a_id FROM academic WHERE position = 3
+target    :academic/{a_id} a voc:AssistantProfessor .
+
+mappingId postdoc-type
+source    SELECT a_id FROM academic WHERE position = 9
+target    :academic/{a_id} a voc:PostDoc .
+
+mappingId academic-firstName
+source    SELECT a_id, fname FROM academic
+target    :academic/{a_id} foaf:firstName {fname}^^xsd:string .
+
+mappingId academic-lastName
+source    SELECT a_id, lname FROM academic
+target    :academic/{a_id} foaf:lastName {lname}^^xsd:string .
+
+mappingId course-type
+source    SELECT c_id FROM course
+target    :course/{c_id} a voc:Course .
+
+mappingId course-title
+source    SELECT c_id, title FROM course
+target    :course/{c_id} voc:courseTitle {title}^^xsd:string .
+
+mappingId teaches-relation
+source    SELECT a_id, c_id FROM teaching
+target    :academic/{a_id} voc:teaches :course/{c_id} .
+
+mappingId enrollment-relation
+source    SELECT s_id, c_id FROM course_registration
+target    :student/{s_id} voc:isEnrolledIn :course/{c_id} .
+
+]]
