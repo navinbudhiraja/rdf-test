@@ -24,8 +24,16 @@ cd rdf-test
 # 2. Run setup (downloads Ontop CLI, DuckDB JDBC driver, creates university.ddb)
 ./setup.sh
 
-# 3. Export your API key
-export ANTHROPIC_API_KEY=sk-ant-...
+# 3. Install Python dependencies
+pip install -r requirements.txt
+
+# 4. Create your .env file from the example and fill in your keys
+cp .env.example .env
+```
+
+Edit `.env` and set at minimum:
+```
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ## Running
@@ -52,6 +60,50 @@ python src/nl_query.py "How many students are enrolled in each course?"
 python src/nl_query.py "Which students share a course with a PostDoc?"
 ```
 
+## Slack Bot
+
+The Slack bot lets anyone in your workspace ask natural language questions by DMing the bot or @mentioning it in a channel. It uses Socket Mode — no public URL or port forwarding needed.
+
+### First-time Slack App setup (admin only — do this once per workspace)
+
+1. Go to https://api.slack.com/apps → **Create New App** → **From scratch**
+2. **Enable Socket Mode** (Settings → Socket Mode → toggle on) → generate an App-Level Token with scope `connections:write` → copy the `xapp-...` token
+3. **Add Bot Token Scopes** (Features → OAuth & Permissions → Bot Token Scopes):
+   - `app_mentions:read`
+   - `chat:write`
+   - `im:history`
+4. **Subscribe to bot events** (Features → Event Subscriptions → toggle on → Subscribe to bot events):
+   - `app_mention`
+   - `message.im`
+5. **Enable Messages Tab** (Features → App Home → Messages Tab → toggle on "Allow users to send messages")
+6. **Install to workspace** (Settings → Install App → Install to Workspace → Allow) → copy the `xoxb-...` Bot Token
+
+### Running the bot (each developer, on their own machine)
+
+Add the two tokens to your `.env`:
+```
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_APP_TOKEN=xapp-...
+```
+
+Start Ontop (required for SPARQL results — SQL works without it):
+```bash
+./start_ontop.sh
+```
+
+Start the bot:
+```bash
+python src/slack_bot.py
+```
+
+The bot is online as long as this process is running. In Slack:
+- **DM:** open a DM with University Bot and type your question
+- **Channel:** `@University Bot which professors teach more than one course?`
+
+> **Note:** The `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are shared across your team — get them from whoever set up the Slack App, or from https://api.slack.com/apps if you have access.
+
+---
+
 ## Dataset
 
 The **university dataset** (from the [Ontop VKG tutorial](https://ontop-vkg.org/tutorial/)) contains:
@@ -70,8 +122,10 @@ The **university dataset** (from the [Ontop VKG tutorial](https://ontop-vkg.org/
 |---|---|
 | `src/nl_translator.py` | Calls Claude API (parallel threads) to generate SPARQL + SQL from NL |
 | `src/sparql_executor.py` | HTTP POST to Ontop SPARQL endpoint, parses JSON results |
-| `src/sql_executor.py` | Opens DuckDB file in read-only mode, executes SQL directly |
+| `src/sql_executor.py` | In-memory DuckDB loaded from `data/university.sql`, executes SQL directly |
 | `src/nl_query.py` | CLI entry point, orchestrates translation + execution + display |
+| `src/mcp_server.py` | MCP server exposing `ask_university`, `run_sql`, `get_schema` tools to Claude Desktop |
+| `src/slack_bot.py` | Slack bot (Socket Mode) — DMs and @mentions trigger the full NL→SPARQL+SQL pipeline |
 | `ontop/university.obda` | OBDA mappings: SQL → RDF triples |
 | `ontop/university.ttl` | OWL 2 QL ontology (classes + properties) |
 | `data/university.sql` | Source data (CREATE TABLE + INSERT) |
