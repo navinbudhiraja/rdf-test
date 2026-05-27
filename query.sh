@@ -15,12 +15,5 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Check the Ontop endpoint is listening on port 8080 using a raw TCP probe
-# (not an HTTP request), so the server logs nothing for the health check.
-if ! (exec 3<>/dev/tcp/localhost/8080) 2>/dev/null; then
-    echo "Error: Ontop endpoint is not running."
-    echo "Start it first with: ./start_ontop.sh"
-    exit 1
-fi
 
 python3 "$PROJECT_DIR/src/nl_query.py" "$@"

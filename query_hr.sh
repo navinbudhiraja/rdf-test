@@ -16,12 +16,6 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Check the HR Ontop endpoint is listening on port 8081 using a raw TCP probe
-# (not an HTTP request), so the server logs nothing for the health check.
-if ! (exec 3<>/dev/tcp/localhost/8081) 2>/dev/null; then
-    echo "Error: HR Ontop endpoint is not running."
-    echo "Start it first with: ./start_ontop.sh hr"
-    exit 1
-fi
+
 
 python3 "$PROJECT_DIR/src/nl_query.py" --dataset hr "$@"
