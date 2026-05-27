@@ -1,0 +1,161 @@
+# =============================================================================
+# SHACL shapes for the AcmeCorp HR graph
+#
+# Validation rules:
+#   1. Every LocalRole must declare exactly one acme:scopedTo Subsidiary
+#   2. Every LocalRole must have at least one mapping to a GlobalRole
+#   3. Every MappingActivity must have provenance: agent, time, confidence
+#   4. Confidence must be in [0, 1]
+#   5. reviewStatus must be one of {draft, in-review, approved, rejected}
+#   6. Every Membership must have member, organization, role, and memberDuring
+#   7. Every active Membership has an interval beginning but no end
+# =============================================================================
+
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix acme:   <https://acme.example/ontology/> .
+
+# -----------------------------------------------------------------------------
+# Shape: LocalRole must be scoped to exactly one Subsidiary
+# -----------------------------------------------------------------------------
+acme:LocalRoleShape a sh:NodeShape ;
+    sh:targetClass acme:LocalRole ;
+    sh:property [
+        sh:path acme:scopedTo ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class acme:Subsidiary ;
+        sh:message "Every LocalRole must be scoped to exactly one Subsidiary."@en
+    ] ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:minCount 1 ;
+        sh:message "Every LocalRole needs at least one skos:prefLabel."@en
+    ] .
+
+# -----------------------------------------------------------------------------
+# Shape: LocalRole must have at least one mapping into the global catalog
+# (i.e. at least one of exactMatch / closeMatch / broadMatch / narrowMatch
+# pointing at an acme:GlobalRole)
+# -----------------------------------------------------------------------------
+acme:LocalRoleMappedShape a sh:NodeShape ;
+    sh:targetClass acme:LocalRole ;
+    sh:or (
+        [ sh:property [ sh:path skos:exactMatch ;  sh:minCount 1 ] ]
+        [ sh:property [ sh:path skos:closeMatch ;  sh:minCount 1 ] ]
+        [ sh:property [ sh:path skos:broadMatch ;  sh:minCount 1 ] ]
+        [ sh:property [ sh:path skos:narrowMatch ; sh:minCount 1 ] ]
+    ) ;
+    sh:message
+      "Every LocalRole must have at least one SKOS mapping (exact/close/broad/narrow) "
+      "into the global catalog. Unmapped roles cannot be reconciled across subsidiaries."@en .
+# NB: this shape will flag acmeDE:KundenServiceMitarbeiter, which is deliberately unmapped.
+
+# -----------------------------------------------------------------------------
+# Shape: MappingActivity provenance integrity
+# -----------------------------------------------------------------------------
+acme:MappingActivityShape a sh:NodeShape ;
+    sh:targetClass acme:MappingActivity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:minCount 1 ;
+        sh:message "MappingActivity must record prov:used (the local concept)."@en
+    ] ;
+    sh:property [
+        sh:path prov:generated ;
+        sh:minCount 1 ;
+        sh:message "MappingActivity must record prov:generated (the global concept)."@en
+    ] ;
+    sh:property [
+        sh:path prov:wasAssociatedWith ;
+        sh:minCount 1 ;
+        sh:message "MappingActivity must record at least one prov:wasAssociatedWith agent."@en
+    ] ;
+    sh:property [
+        sh:path prov:atTime ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "MappingActivity must record exactly one prov:atTime (xsd:dateTime)."@en
+    ] ;
+    sh:property [
+        sh:path acme:confidence ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 1 ;
+        sh:message "acme:confidence must be a decimal in [0, 1]."@en
+    ] ;
+    sh:property [
+        sh:path acme:reviewStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "draft" "in-review" "approved" "rejected" ) ;
+        sh:message "acme:reviewStatus must be one of draft/in-review/approved/rejected."@en
+    ] .
+
+# -----------------------------------------------------------------------------
+# Shape: Membership integrity
+# -----------------------------------------------------------------------------
+acme:MembershipShape a sh:NodeShape ;
+    sh:targetClass org:Membership ;
+    sh:property [
+        sh:path org:member ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class foaf:Person ;
+        sh:message "Membership must reference exactly one foaf:Person via org:member."@en
+    ] ;
+    sh:property [
+        sh:path org:organization ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class org:FormalOrganization ;
+        sh:message "Membership must reference exactly one org:FormalOrganization."@en
+    ] ;
+    sh:property [
+        sh:path org:role ;
+        sh:minCount 1 ;
+        sh:message "Membership must reference at least one role."@en
+    ] ;
+    sh:property [
+        sh:path org:memberDuring ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Membership must have exactly one org:memberDuring interval."@en
+    ] .
+
+# -----------------------------------------------------------------------------
+# Shape: Post integrity
+# -----------------------------------------------------------------------------
+acme:PostShape a sh:NodeShape ;
+    sh:targetClass org:Post ;
+    sh:property [
+        sh:path org:role ;
+        sh:minCount 1 ;
+        sh:message "Every org:Post must declare at least one org:role."@en
+    ] ;
+    sh:property [
+        sh:path org:postIn ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class org:FormalOrganization ;
+        sh:message "Every org:Post must be in exactly one org:FormalOrganization."@en
+    ] .
+
+# -----------------------------------------------------------------------------
+# Shape: Person integrity
+# -----------------------------------------------------------------------------
+acme:PersonShape a sh:NodeShape ;
+    sh:targetClass foaf:Person ;
+    sh:property [
+        sh:path foaf:name ;
+        sh:minCount 1 ;
+        sh:message "Every foaf:Person must have a foaf:name."@en
+    ] .

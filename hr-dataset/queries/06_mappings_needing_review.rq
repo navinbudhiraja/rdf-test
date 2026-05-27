@@ -1,0 +1,38 @@
+# Q6: Mappings needing review
+#
+# Find every MappingActivity that requires human attention. This is the
+# operational query the mapping ops team would run weekly.
+#
+# Criteria (OR'd together):
+#   - confidence < 0.7
+#   - reviewStatus is "in-review" or "draft"
+#
+# Returns: which local role, which global role, who created it, confidence,
+# status, and timestamp.
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX prov:   <http://www.w3.org/ns/prov#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX acme:   <https://acme.example/ontology/>
+
+SELECT ?activity ?localLabel ?globalLabel ?confidence ?status ?atTime ?agentLabel
+WHERE {
+  ?activity a acme:MappingActivity ;
+            prov:used ?localRole ;
+            prov:generated ?globalRole ;
+            prov:atTime ?atTime ;
+            acme:confidence ?confidence ;
+            acme:reviewStatus ?status ;
+            prov:wasAssociatedWith ?agent .
+
+  ?localRole  skos:prefLabel ?localLabel .
+  ?globalRole skos:prefLabel ?globalLabel .
+  ?agent rdfs:label ?agentLabel .
+
+  FILTER ( ?confidence < 0.7 || ?status IN ("in-review", "draft") )
+  FILTER (LCASE(lang(?localLabel))  IN ("en", "en-gb", "en-us", "de"))
+  FILTER (lang(?globalLabel) = "en")
+}
+ORDER BY ?confidence ?atTime

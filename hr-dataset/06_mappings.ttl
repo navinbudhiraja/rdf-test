@@ -1,0 +1,530 @@
+# =============================================================================
+# Local -> Global SKOS mappings, with provenance
+#
+# Every mapping link has an associated prov:Activity that records:
+#   - who created the mapping
+#   - when
+#   - what method (LLM-drafted, human-approved, manual, rule-based)
+#   - confidence score in [0,1]
+#   - review status (approved, in-review, draft)
+#
+# Two mappings are deliberately given LOW confidence (< 0.7) so they appear
+# in the "mappings needing review" diagnostic query.
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeG:  <https://acme.example/global/role/> .
+@prefix acmeUK: <https://acme.example/uk/role/> .
+@prefix acmeDE: <https://acme.example/de/role/> .
+@prefix acmeUS: <https://acme.example/us/role/> .
+@prefix mapAct: <https://acme.example/mapping/activity/> .
+
+# Mapping "agents" (curators)
+<https://acme.example/person/jordan-kim> a prov:Person ;
+    rdfs:label "Jordan Kim (Global HR Ops)" .
+<https://acme.example/person/maria-rossi> a prov:Person ;
+    rdfs:label "Maria Rossi (Global HR Ops)" .
+<https://acme.example/agent/llm-mapper-v2> a prov:SoftwareAgent ;
+    rdfs:label "LLM Mapper v2 (acme-internal)" .
+
+
+# =============================================================================
+#  AcmeUK mappings
+# =============================================================================
+
+acmeUK:SoftwareEngineer        skos:closeMatch acmeG:SoftwareEngineerL3 .
+mapAct:uk_001 a acme:MappingActivity ;
+    prov:used acmeUK:SoftwareEngineer ;
+    prov:generated acmeG:SoftwareEngineerL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ,
+                            <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-10T09:00:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:SeniorSoftwareEngineer  skos:closeMatch acmeG:SoftwareEngineerL4 .
+mapAct:uk_002 a acme:MappingActivity ;
+    prov:used acmeUK:SeniorSoftwareEngineer ;
+    prov:generated acmeG:SoftwareEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ,
+                            <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-10T09:01:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:LeadSoftwareEngineer    skos:closeMatch acmeG:SoftwareEngineerL5 .
+mapAct:uk_003 a acme:MappingActivity ;
+    prov:used acmeUK:LeadSoftwareEngineer ;
+    prov:generated acmeG:SoftwareEngineerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-10T09:02:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.88"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:EngineeringManager      skos:closeMatch acmeG:EngineeringManagerL6 .
+mapAct:uk_004 a acme:MappingActivity ;
+    prov:used acmeUK:EngineeringManager ;
+    prov:generated acmeG:EngineeringManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-10T09:03:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:HeadOfEngineering       skos:closeMatch acmeG:EngineeringDirectorL7 .
+mapAct:uk_005 a acme:MappingActivity ;
+    prov:used acmeUK:HeadOfEngineering ;
+    prov:generated acmeG:EngineeringDirectorL7 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-10T09:04:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.91"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:DataEngineer            skos:closeMatch acmeG:DataEngineerL4 .
+mapAct:uk_006 a acme:MappingActivity ;
+    prov:used acmeUK:DataEngineer ;
+    prov:generated acmeG:DataEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-10T09:05:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:ProductManager          skos:closeMatch acmeG:ProductManagerL4 .
+mapAct:uk_007 a acme:MappingActivity ;
+    prov:used acmeUK:ProductManager ;
+    prov:generated acmeG:ProductManagerL4 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-11T11:00:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:SeniorProductManager    skos:closeMatch acmeG:SeniorProductManagerL5 .
+mapAct:uk_008 a acme:MappingActivity ;
+    prov:used acmeUK:SeniorProductManager ;
+    prov:generated acmeG:SeniorProductManagerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-11T11:01:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:AccountManager          skos:closeMatch acmeG:AccountExecutiveL3 .
+mapAct:uk_009 a acme:MappingActivity ;
+    prov:used acmeUK:AccountManager ;
+    prov:generated acmeG:AccountExecutiveL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ,
+                            <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-11T11:02:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.82"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:HeadOfMarketing         skos:closeMatch acmeG:MarketingDirectorL7 .
+mapAct:uk_010 a acme:MappingActivity ;
+    prov:used acmeUK:HeadOfMarketing ;
+    prov:generated acmeG:MarketingDirectorL7 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-11T11:03:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:FinancialAnalyst        skos:closeMatch acmeG:FinancialAnalystL3 .
+mapAct:uk_011 a acme:MappingActivity ;
+    prov:used acmeUK:FinancialAnalyst ;
+    prov:generated acmeG:FinancialAnalystL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-11T11:04:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:PeoplePartner           skos:closeMatch acmeG:HRBusinessPartnerL5 .
+mapAct:uk_012 a acme:MappingActivity ;
+    prov:used acmeUK:PeoplePartner ;
+    prov:generated acmeG:HRBusinessPartnerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-11T11:05:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.89"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUK:CustomerSuccessAssociate skos:closeMatch acmeG:CustomerSupportRepL2 .
+mapAct:uk_013 a acme:MappingActivity ;
+    prov:used acmeUK:CustomerSuccessAssociate ;
+    prov:generated acmeG:CustomerSupportRepL2 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-11T11:06:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, in review" ;
+    acme:confidence "0.62"^^xsd:decimal ;    # <-- low confidence: should surface for review
+    acme:reviewStatus "in-review" .
+
+acmeUK:OperationsLead          skos:closeMatch acmeG:OperationsManagerL6 .
+mapAct:uk_014 a acme:MappingActivity ;
+    prov:used acmeUK:OperationsLead ;
+    prov:generated acmeG:OperationsManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-11T11:07:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.85"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+
+# =============================================================================
+#  AcmeDE mappings
+# =============================================================================
+
+acmeDE:SoftwareentwicklerII   skos:closeMatch acmeG:SoftwareEngineerL3 .
+mapAct:de_001 a acme:MappingActivity ;
+    prov:used acmeDE:SoftwareentwicklerII ;
+    prov:generated acmeG:SoftwareEngineerL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ,
+                            <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:00:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:SoftwareentwicklerIII  skos:closeMatch acmeG:SoftwareEngineerL4 .
+mapAct:de_002 a acme:MappingActivity ;
+    prov:used acmeDE:SoftwareentwicklerIII ;
+    prov:generated acmeG:SoftwareEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ,
+                            <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:01:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.92"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:SoftwareentwicklerIV   skos:closeMatch acmeG:SoftwareEngineerL5 .
+mapAct:de_003 a acme:MappingActivity ;
+    prov:used acmeDE:SoftwareentwicklerIV ;
+    prov:generated acmeG:SoftwareEngineerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:02:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.91"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:Teamleiter             skos:closeMatch acmeG:EngineeringManagerL6 .
+mapAct:de_004 a acme:MappingActivity ;
+    prov:used acmeDE:Teamleiter ;
+    prov:generated acmeG:EngineeringManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:03:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:Entwicklungsleiter     skos:closeMatch acmeG:EngineeringDirectorL7 .
+mapAct:de_005 a acme:MappingActivity ;
+    prov:used acmeDE:Entwicklungsleiter ;
+    prov:generated acmeG:EngineeringDirectorL7 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:04:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.90"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:DatenIngenieur         skos:closeMatch acmeG:DataEngineerL4 .
+mapAct:de_006 a acme:MappingActivity ;
+    prov:used acmeDE:DatenIngenieur ;
+    prov:generated acmeG:DataEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-12T10:05:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:DataScientist          skos:closeMatch acmeG:DataScientistL4 .
+mapAct:de_007 a acme:MappingActivity ;
+    prov:used acmeDE:DataScientist ;
+    prov:generated acmeG:DataScientistL4 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-12T10:06:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:ProduktManager         skos:closeMatch acmeG:ProductManagerL4 .
+mapAct:de_008 a acme:MappingActivity ;
+    prov:used acmeDE:ProduktManager ;
+    prov:generated acmeG:ProductManagerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-12T10:07:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:Vertriebsmitarbeiter   skos:closeMatch acmeG:AccountExecutiveL3 .
+mapAct:de_009 a acme:MappingActivity ;
+    prov:used acmeDE:Vertriebsmitarbeiter ;
+    prov:generated acmeG:AccountExecutiveL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-12T10:08:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.84"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:Vertriebsleiter        skos:closeMatch acmeG:SalesManagerL6 .
+mapAct:de_010 a acme:MappingActivity ;
+    prov:used acmeDE:Vertriebsleiter ;
+    prov:generated acmeG:SalesManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:09:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.89"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:MarketingManager       skos:closeMatch acmeG:MarketingManagerL5 .
+mapAct:de_011 a acme:MappingActivity ;
+    prov:used acmeDE:MarketingManager ;
+    prov:generated acmeG:MarketingManagerL5 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-12T10:10:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:Finanzanalyst          skos:closeMatch acmeG:FinancialAnalystL3 .
+mapAct:de_012 a acme:MappingActivity ;
+    prov:used acmeDE:Finanzanalyst ;
+    prov:generated acmeG:FinancialAnalystL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-12T10:11:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeDE:PersonalReferent       skos:closeMatch acmeG:HRBusinessPartnerL5 .
+mapAct:de_013 a acme:MappingActivity ;
+    prov:used acmeDE:PersonalReferent ;
+    prov:generated acmeG:HRBusinessPartnerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-12T10:12:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.87"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+# NB: acmeDE:KundenServiceMitarbeiter is intentionally NOT mapped here.
+
+
+# =============================================================================
+#  AcmeUS mappings
+# =============================================================================
+
+acmeUS:SWE_II            skos:closeMatch acmeG:SoftwareEngineerL3 .
+mapAct:us_001 a acme:MappingActivity ;
+    prov:used acmeUS:SWE_II ;
+    prov:generated acmeG:SoftwareEngineerL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:00:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:SWE_III           skos:closeMatch acmeG:SoftwareEngineerL4 .
+mapAct:us_002 a acme:MappingActivity ;
+    prov:used acmeUS:SWE_III ;
+    prov:generated acmeG:SoftwareEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:01:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:StaffSWE          skos:closeMatch acmeG:SoftwareEngineerL5 .
+mapAct:us_003 a acme:MappingActivity ;
+    prov:used acmeUS:StaffSWE ;
+    prov:generated acmeG:SoftwareEngineerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-13T14:02:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+# Principal SWE is narrower than the L5 staff role (it's higher seniority than L5).
+# We model it as a closeMatch to a hypothetical L6+ — but to avoid expanding the
+# global catalog here, we use broadMatch to indicate the global concept is broader.
+acmeUS:PrincipalSWE      skos:broadMatch acmeG:SoftwareEngineerL5 .
+mapAct:us_004 a acme:MappingActivity ;
+    prov:used acmeUS:PrincipalSWE ;
+    prov:generated acmeG:SoftwareEngineerL5 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-13T14:03:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.78"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:EM                skos:closeMatch acmeG:EngineeringManagerL6 .
+mapAct:us_005 a acme:MappingActivity ;
+    prov:used acmeUS:EM ;
+    prov:generated acmeG:EngineeringManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:04:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:DirectorOfEngineering  skos:closeMatch acmeG:EngineeringDirectorL7 .
+mapAct:us_006 a acme:MappingActivity ;
+    prov:used acmeUS:DirectorOfEngineering ;
+    prov:generated acmeG:EngineeringDirectorL7 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-13T14:05:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:DataEngineer      skos:closeMatch acmeG:DataEngineerL4 .
+mapAct:us_007 a acme:MappingActivity ;
+    prov:used acmeUS:DataEngineer ;
+    prov:generated acmeG:DataEngineerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:06:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:DataScientist     skos:closeMatch acmeG:DataScientistL4 .
+mapAct:us_008 a acme:MappingActivity ;
+    prov:used acmeUS:DataScientist ;
+    prov:generated acmeG:DataScientistL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:07:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:PM                skos:closeMatch acmeG:ProductManagerL4 .
+mapAct:us_009 a acme:MappingActivity ;
+    prov:used acmeUS:PM ;
+    prov:generated acmeG:ProductManagerL4 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:08:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:SeniorPM          skos:closeMatch acmeG:SeniorProductManagerL5 .
+mapAct:us_010 a acme:MappingActivity ;
+    prov:used acmeUS:SeniorPM ;
+    prov:generated acmeG:SeniorProductManagerL5 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:09:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:AE                skos:closeMatch acmeG:AccountExecutiveL3 .
+mapAct:us_011 a acme:MappingActivity ;
+    prov:used acmeUS:AE ;
+    prov:generated acmeG:AccountExecutiveL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:10:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:RegionalSalesManager skos:closeMatch acmeG:SalesManagerL6 .
+mapAct:us_012 a acme:MappingActivity ;
+    prov:used acmeUS:RegionalSalesManager ;
+    prov:generated acmeG:SalesManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-13T14:11:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.91"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+# Deliberately broadMatch (not closeMatch): AcmeUS's "Area VP" is title-inflated
+# relative to the global VP definition.
+acmeUS:AreaVPOfSales     skos:broadMatch acmeG:VPSalesL8 .
+mapAct:us_013 a acme:MappingActivity ;
+    prov:used acmeUS:AreaVPOfSales ;
+    prov:generated acmeG:VPSalesL8 ;
+    prov:wasAssociatedWith <https://acme.example/person/jordan-kim> ;
+    prov:atTime "2026-03-13T14:12:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.65"^^xsd:decimal ;    # <-- low confidence: should surface for review
+    acme:reviewStatus "in-review" .
+
+acmeUS:MarketingManager  skos:closeMatch acmeG:MarketingManagerL5 .
+mapAct:us_014 a acme:MappingActivity ;
+    prov:used acmeUS:MarketingManager ;
+    prov:generated acmeG:MarketingManagerL5 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:13:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.95"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:DirectorOfMarketing  skos:closeMatch acmeG:MarketingDirectorL7 .
+mapAct:us_015 a acme:MappingActivity ;
+    prov:used acmeUS:DirectorOfMarketing ;
+    prov:generated acmeG:MarketingDirectorL7 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-13T14:14:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.94"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:FinancialAnalyst     skos:closeMatch acmeG:FinancialAnalystL3 .
+mapAct:us_016 a acme:MappingActivity ;
+    prov:used acmeUS:FinancialAnalyst ;
+    prov:generated acmeG:FinancialAnalystL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:15:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:FinanceManager       skos:closeMatch acmeG:FinanceManagerL6 .
+mapAct:us_017 a acme:MappingActivity ;
+    prov:used acmeUS:FinanceManager ;
+    prov:generated acmeG:FinanceManagerL6 ;
+    prov:wasAssociatedWith <https://acme.example/person/maria-rossi> ;
+    prov:atTime "2026-03-13T14:16:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "manual" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:HRBP                 skos:closeMatch acmeG:HRBusinessPartnerL5 .
+mapAct:us_018 a acme:MappingActivity ;
+    prov:used acmeUS:HRBP ;
+    prov:generated acmeG:HRBusinessPartnerL5 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:17:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.97"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:TechnicalRecruiter   skos:closeMatch acmeG:RecruiterL3 .
+mapAct:us_019 a acme:MappingActivity ;
+    prov:used acmeUS:TechnicalRecruiter ;
+    prov:generated acmeG:RecruiterL3 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:18:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.96"^^xsd:decimal ;
+    acme:reviewStatus "approved" .
+
+acmeUS:CustomerSupportSpecialist skos:closeMatch acmeG:CustomerSupportRepL2 .
+mapAct:us_020 a acme:MappingActivity ;
+    prov:used acmeUS:CustomerSupportSpecialist ;
+    prov:generated acmeG:CustomerSupportRepL2 ;
+    prov:wasAssociatedWith <https://acme.example/agent/llm-mapper-v2> ;
+    prov:atTime "2026-03-13T14:19:00Z"^^xsd:dateTime ;
+    acme:mappingMethod "LLM-drafted, human-approved" ;
+    acme:confidence "0.93"^^xsd:decimal ;
+    acme:reviewStatus "approved" .

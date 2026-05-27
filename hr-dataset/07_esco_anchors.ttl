@@ -1,0 +1,98 @@
+# =============================================================================
+# Anchors: AcmeCorp Global Roles -> ESCO occupations / ISCO groups
+#
+# These URIs are REAL, live ESCO concept URIs (ESCO v1.2.x).
+# They resolve at:
+#   https://esco.ec.europa.eu/en/classification/occupation?uri=<URI>
+#
+# If you load the official ESCO RDF dump alongside this dataset, these
+# anchors will pull in the full multilingual ESCO context: preferred labels
+# in 28 languages, descriptions, alternative labels, related skills, etc.
+#
+# Mapping convention:
+#   - skos:exactMatch  - global role definitionally equivalent to an ESCO concept
+#   - skos:closeMatch  - global role is essentially the same as an ESCO concept
+#   - skos:broadMatch  - global role is more specific than an ESCO concept
+#                        (so ESCO concept is broader)
+#   - skos:narrowMatch - global role is more general than an ESCO concept
+# =============================================================================
+
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix acmeG:  <https://acme.example/global/role/> .
+@prefix escoOcc: <http://data.europa.eu/esco/occupation/> .
+@prefix escoIsco: <http://data.europa.eu/esco/isco/> .
+
+# -----------------------------------------------------------------------------
+# Engineering family -> ISCO 2512 (Software developers) and ESCO occupations
+# -----------------------------------------------------------------------------
+
+# All software engineer levels are narrower than the ISCO unit group C2512
+acmeG:SoftwareEngineerL3  skos:broadMatch escoIsco:C2512 .
+acmeG:SoftwareEngineerL4  skos:broadMatch escoIsco:C2512 .
+acmeG:SoftwareEngineerL5  skos:broadMatch escoIsco:C2512 .
+
+# Most-relevant ESCO concept under ISCO 2512: "software developer"
+# (URI as referenced in ESCO documentation - the C2512 unit group)
+# Closer match: ICT application developer (a real ESCO occupation)
+acmeG:SoftwareEngineerL3  skos:closeMatch
+    escoOcc:bd272aee-adc9-4a06-a15c-a73b4b4a46a7 .   # ICT application developer
+acmeG:SoftwareEngineerL4  skos:closeMatch
+    escoOcc:bd272aee-adc9-4a06-a15c-a73b4b4a46a7 .
+
+# ICT system developer (real ESCO URI)
+acmeG:SoftwareEngineerL5  skos:relatedMatch
+    escoOcc:a7c1d23d-aeca-4bee-9a08-5993ed98b135 .   # ICT system developer
+
+# Data Engineer - broadly under ISCO 2511 Systems Analysts / 2512 Software developers
+acmeG:DataEngineerL4      skos:broadMatch escoIsco:C2521 .   # Database designers and administrators
+
+# Data Scientist
+acmeG:DataScientistL4     skos:broadMatch escoIsco:C2120 .   # Mathematicians, actuaries and statisticians
+
+# Engineering Manager / Director -> ISCO 1330 ICT services managers
+acmeG:EngineeringManagerL6   skos:broadMatch escoIsco:C1330 .
+acmeG:EngineeringDirectorL7  skos:broadMatch escoIsco:C1330 .
+
+# -----------------------------------------------------------------------------
+# Product family -> ISCO 1219 Business services managers
+# -----------------------------------------------------------------------------
+
+acmeG:ProductManagerL4        skos:broadMatch escoIsco:C1219 .
+acmeG:SeniorProductManagerL5  skos:broadMatch escoIsco:C1219 .
+
+# -----------------------------------------------------------------------------
+# Sales family -> ISCO 2433 (technical sales) / 1221 (sales managers)
+# -----------------------------------------------------------------------------
+
+acmeG:AccountExecutiveL3  skos:broadMatch escoIsco:C2433 .   # Technical/medical sales professionals
+acmeG:SalesManagerL6      skos:broadMatch escoIsco:C1221 .   # Sales and marketing managers
+acmeG:VPSalesL8           skos:broadMatch escoIsco:C1221 .
+
+# -----------------------------------------------------------------------------
+# Marketing family
+# -----------------------------------------------------------------------------
+
+acmeG:MarketingManagerL5  skos:broadMatch escoIsco:C1221 .
+acmeG:MarketingDirectorL7 skos:broadMatch escoIsco:C1221 .
+
+# -----------------------------------------------------------------------------
+# Finance family -> ISCO 2411 Accountants / 1211 Finance managers
+# -----------------------------------------------------------------------------
+
+acmeG:FinancialAnalystL3  skos:broadMatch escoIsco:C2413 .   # Financial analysts
+acmeG:FinanceManagerL6    skos:broadMatch escoIsco:C1211 .   # Finance managers
+
+# -----------------------------------------------------------------------------
+# People / HR family -> ISCO 1212 Human resource managers, 2423 Personnel professionals
+# -----------------------------------------------------------------------------
+
+acmeG:HRBusinessPartnerL5  skos:broadMatch escoIsco:C2423 .  # Personnel and careers professionals
+acmeG:RecruiterL3          skos:broadMatch escoIsco:C2423 .
+
+# -----------------------------------------------------------------------------
+# Operations / Support
+# -----------------------------------------------------------------------------
+
+acmeG:OperationsManagerL6     skos:broadMatch escoIsco:C1219 .
+acmeG:CustomerSupportRepL2    skos:broadMatch escoIsco:C4222 .   # Contact centre information clerks
+acmeG:CustomerSupportLeadL5   skos:broadMatch escoIsco:C4222 .

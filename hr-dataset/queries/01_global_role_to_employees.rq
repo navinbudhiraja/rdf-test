@@ -1,0 +1,54 @@
+# Q1: All people currently holding a role equivalent to a given global role,
+# across all subsidiaries.
+#
+# This is the canonical cross-subsidiary query. It demonstrates that with
+# the semantic layer in place, you ask the question once, against the
+# global concept, and get answers from every local vocabulary.
+#
+# Bind ?targetRole to any global role URI to test, e.g.:
+#   acmeG:SoftwareEngineerL4     (Senior Software Engineer)
+#   acmeG:EngineeringManagerL6
+#   acmeG:AccountExecutiveL3
+#
+# The property path follows skos:closeMatch OR skos:exactMatch from local roles
+# UP to the global concept (the inverse direction, via `^`).
+#
+# FILTER NOT EXISTS clauses out historical memberships (those with hasEnd).
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX org:    <http://www.w3.org/ns/org#>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX acme:   <https://acme.example/ontology/>
+PREFIX acmeG:  <https://acme.example/global/role/>
+
+SELECT ?personName ?subsidiaryLabel ?localRoleLabel ?startDate
+WHERE {
+  # CHANGE THIS to test other roles:
+  BIND( acmeG:SoftwareEngineerL4 AS ?targetRole )
+
+  # Local role -> global role via SKOS mapping
+  ?localRole skos:closeMatch|skos:exactMatch  ?targetRole .
+
+  # Membership uses the local role
+  ?membership a org:Membership ;
+              org:role ?localRole ;
+              org:member ?person ;
+              org:organization ?subsidiary ;
+              org:memberDuring ?interval .
+
+  # Active membership only (no end date)
+  FILTER NOT EXISTS { ?interval time:hasEnd ?endDate . }
+
+  ?interval time:hasBeginning ?beg .
+  ?beg time:inXSDDate ?startDate .
+
+  ?person foaf:name ?personName .
+  ?subsidiary skos:prefLabel ?subsidiaryLabel .
+  ?localRole  skos:prefLabel ?localRoleLabel .
+
+  FILTER (LCASE(lang(?subsidiaryLabel)) IN ("en", "en-gb", "en-us"))
+}
+ORDER BY ?subsidiaryLabel ?personName

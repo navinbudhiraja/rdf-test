@@ -1,0 +1,29 @@
+# Q7: Unmapped local roles
+#
+# Find every LocalRole that has NO outgoing SKOS mapping (exact/close/broad/
+# narrow) to anything in the global catalog. These roles are invisible to
+# cross-subsidiary queries — they need to be mapped or formally retired.
+#
+# This is the "what's missing?" diagnostic.
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX acme:   <https://acme.example/ontology/>
+
+SELECT ?localRole ?localLabel ?subsidiaryLabel
+WHERE {
+  ?localRole a acme:LocalRole ;
+             skos:prefLabel ?localLabel ;
+             acme:scopedTo ?subsidiary .
+  ?subsidiary skos:prefLabel ?subsidiaryLabel .
+
+  FILTER NOT EXISTS {
+    ?localRole skos:exactMatch|skos:closeMatch|skos:broadMatch|skos:narrowMatch ?anyGlobal .
+    ?anyGlobal a acme:GlobalRole .
+  }
+
+  FILTER (LCASE(lang(?localLabel))       IN ("en", "en-gb", "en-us", "de"))
+  FILTER (LCASE(lang(?subsidiaryLabel))  IN ("en", "en-gb", "en-us"))
+}
+ORDER BY ?subsidiaryLabel ?localLabel

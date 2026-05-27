@@ -1,0 +1,43 @@
+# Q4: Reporting line for a given person
+#
+# Walk org:reportsTo on the Post graph upward from the person's current Post
+# all the way to the top of their reporting chain.
+#
+# This shows how the Role/Post distinction enables clean management-chain queries:
+# org:reportsTo is on the Post (which is stable), not on the Role (which is abstract).
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX org:    <http://www.w3.org/ns/org#>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX acme:   <https://acme.example/ontology/>
+PREFIX p:      <https://acme.example/person/>
+
+SELECT ?personName ?postLabel
+WHERE {
+  # CHANGE THIS to query someone else's chain:
+  BIND( p:alice_01 AS ?startPerson )
+
+  ?startPerson foaf:name ?personName .
+  ?startPerson org:hasMembership/acme:viaPost ?startPost .
+
+  # Walk reportsTo from the person's own post up to the top of the chain.
+  # NOTE: Ontop (an OBDA/SQL engine) supports only sequence (/), inverse (^) and
+  # alternative (|) paths — NOT arbitrary-length (*, +) or zero-or-one (?) paths.
+  # So we enumerate a bounded chain explicitly: depth 0 is the person's own post
+  # (re-derived via the membership path, not a zero-length path), and depths 1..6
+  # are fixed-length reportsTo sequences. This covers any realistic org chart.
+  {
+    { ?startPerson org:hasMembership/acme:viaPost ?reportingPost }
+    UNION { ?startPost org:reportsTo ?reportingPost }
+    UNION { ?startPost org:reportsTo/org:reportsTo ?reportingPost }
+    UNION { ?startPost org:reportsTo/org:reportsTo/org:reportsTo ?reportingPost }
+    UNION { ?startPost org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo ?reportingPost }
+    UNION { ?startPost org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo ?reportingPost }
+    UNION { ?startPost org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo/org:reportsTo ?reportingPost }
+  }
+  ?reportingPost skos:prefLabel ?postLabel .
+
+  FILTER (LCASE(lang(?postLabel)) IN ("en", "en-gb", "en-us"))
+}

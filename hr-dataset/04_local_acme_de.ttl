@@ -1,0 +1,123 @@
+# =============================================================================
+# AcmeDE local role vocabulary
+#
+# German titles with seniority suffixes (II, III, IV). Two roles deliberately
+# carry both German and English labels to test multilingual mapping.
+# One role (KundenServiceMitarbeiter) is deliberately UNMAPPED — it should be
+# surfaced by the "unmapped local roles" diagnostic query.
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeDE: <https://acme.example/de/role/> .
+
+acmeDE:RoleScheme a skos:ConceptScheme ;
+    skos:prefLabel "AcmeDE Role Scheme"@de , "AcmeDE Role Scheme"@en ;
+    rdfs:comment "Lokales Rollenvokabular der Acme Deutschland GmbH."@de .
+
+# -----------------------------------------------------------------------------
+# Engineering
+# -----------------------------------------------------------------------------
+
+acmeDE:SoftwareentwicklerII a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Softwareentwickler II"@de ;
+    skos:altLabel "Software Engineer II"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:SoftwareentwicklerIII a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Softwareentwickler III"@de ;
+    skos:altLabel "Senior Software Engineer"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:SoftwareentwicklerIV a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Softwareentwickler IV"@de ;
+    skos:altLabel "Staff Software Engineer"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:Teamleiter a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Teamleiter Entwicklung"@de ;
+    skos:altLabel "Engineering Team Lead"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:Entwicklungsleiter a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Entwicklungsleiter"@de ;
+    skos:altLabel "Head of Development"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:DatenIngenieur a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Dateningenieur"@de ;
+    skos:altLabel "Data Engineer"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:DataScientist a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Data Scientist"@de ;
+    skos:scopeNote
+      "AcmeDE uses the English term 'Data Scientist' directly, with no German "
+      "equivalent in current use."@de ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+# -----------------------------------------------------------------------------
+# Product
+# -----------------------------------------------------------------------------
+
+acmeDE:ProduktManager a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Produktmanager"@de ;
+    skos:altLabel "Product Manager"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+# -----------------------------------------------------------------------------
+# Sales / Marketing
+# -----------------------------------------------------------------------------
+
+acmeDE:Vertriebsmitarbeiter a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Vertriebsmitarbeiter"@de ;
+    skos:altLabel "Sales Representative"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:Vertriebsleiter a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Vertriebsleiter DACH"@de ;
+    skos:altLabel "Sales Manager DACH"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:MarketingManager a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Marketing Manager DACH"@de ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+# -----------------------------------------------------------------------------
+# Finance / HR / Support
+# -----------------------------------------------------------------------------
+
+acmeDE:Finanzanalyst a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Finanzanalyst"@de ;
+    skos:altLabel "Financial Analyst"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+acmeDE:PersonalReferent a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Personalreferent"@de ;
+    skos:altLabel "HR Business Partner"@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .
+
+# DELIBERATELY UNMAPPED — should appear in the "unmapped local roles" query
+acmeDE:KundenServiceMitarbeiter a acme:LocalRole ;
+    skos:inScheme acmeDE:RoleScheme ;
+    skos:prefLabel "Kundenservicemitarbeiter"@de ;
+    skos:altLabel "Customer Service Agent"@en ;
+    skos:scopeNote
+      "TODO: not yet mapped to the global catalog. Pending review by global HR ops."@en ;
+    acme:scopedTo <https://acme.example/org/AcmeDE> .

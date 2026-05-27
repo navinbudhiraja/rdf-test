@@ -1,0 +1,34 @@
+# Q2: Cross-subsidiary equivalents
+#
+# Given one local role in one subsidiary, find every local role in OTHER
+# subsidiaries that is mapped to the same global concept.
+#
+# This is the question "what do they call MY job in our other offices?"
+# It uses the global concept as a pivot.
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX acme:   <https://acme.example/ontology/>
+PREFIX acmeUK: <https://acme.example/uk/role/>
+PREFIX acmeDE: <https://acme.example/de/role/>
+PREFIX acmeUS: <https://acme.example/us/role/>
+
+SELECT ?inputLabel ?globalLabel ?equivalentRole ?equivalentLabel ?equivalentScheme
+WHERE {
+  # CHANGE THIS to test other inputs:
+  BIND( acmeUK:SeniorSoftwareEngineer AS ?inputRole )
+
+  # The input's mapping to a global concept
+  ?inputRole skos:closeMatch|skos:exactMatch ?globalRole ;
+             skos:prefLabel ?inputLabel .
+  ?globalRole skos:prefLabel ?globalLabel .
+
+  # All OTHER local roles that close-match the same global concept
+  ?equivalentRole skos:closeMatch|skos:exactMatch ?globalRole ;
+                  skos:inScheme ?equivalentScheme ;
+                  skos:prefLabel ?equivalentLabel .
+
+  FILTER (?equivalentRole != ?inputRole)
+  FILTER (LCASE(lang(?inputLabel)) IN ("en", "en-gb", "en-us"))
+  FILTER (lang(?globalLabel) = "en")
+}

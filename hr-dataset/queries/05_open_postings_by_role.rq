@@ -1,0 +1,43 @@
+# Q5: Open postings
+#
+# Find every Post that has no currently-active Membership.
+# A Membership is "currently active" if it has no time:hasEnd.
+#
+# Returns the global role concept too, so HR can advertise the opening with
+# a consistent global title and skill profile.
+
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX org:    <http://www.w3.org/ns/org#>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX acme:   <https://acme.example/ontology/>
+
+SELECT ?postLabel ?subsidiaryLabel ?localRoleLabel ?globalRoleLabel
+WHERE {
+  ?post a org:Post ;
+        skos:prefLabel ?postLabel ;
+        org:role ?localRole ;
+        org:postIn ?subsidiary .
+
+  ?subsidiary skos:prefLabel ?subsidiaryLabel .
+  ?localRole  skos:prefLabel ?localRoleLabel .
+
+  # No currently-active membership for this post.
+  FILTER NOT EXISTS {
+    ?activeM a org:Membership ;
+             acme:viaPost ?post ;
+             org:memberDuring ?interval .
+    FILTER NOT EXISTS { ?interval time:hasEnd ?e . }
+  }
+
+  # If the local role maps to a global concept, surface it.
+  OPTIONAL {
+    ?localRole skos:closeMatch|skos:exactMatch ?globalRole .
+    ?globalRole skos:prefLabel ?globalRoleLabel .
+    FILTER (lang(?globalRoleLabel) = "en")
+  }
+
+  FILTER (LCASE(lang(?postLabel))        IN ("en", "en-gb", "en-us"))
+  FILTER (LCASE(lang(?subsidiaryLabel))  IN ("en", "en-gb", "en-us"))
+  FILTER (LCASE(lang(?localRoleLabel))   IN ("en", "en-gb", "en-us", "de"))
+}

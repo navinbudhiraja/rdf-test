@@ -1,0 +1,243 @@
+[PrefixDeclaration]
+acme:     https://acme.example/ontology/
+acmeG:    https://acme.example/global/role/
+acmeUK:   https://acme.example/uk/role/
+acmeDE:   https://acme.example/de/role/
+acmeUS:   https://acme.example/us/role/
+orgU:     https://acme.example/org/
+p:        https://acme.example/person/
+post:     https://acme.example/post/
+m:        https://acme.example/membership/
+mapAct:   https://acme.example/mapping/activity/
+org:      http://www.w3.org/ns/org#
+skos:     http://www.w3.org/2004/02/skos/core#
+foaf:     http://xmlns.com/foaf/0.1/
+prov:     http://www.w3.org/ns/prov#
+time:     http://www.w3.org/2006/time#
+rdf:      http://www.w3.org/1999/02/22-rdf-syntax-ns#
+rdfs:     http://www.w3.org/2000/01/rdf-schema#
+xsd:      http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+
+mappingId   org-group
+source      SELECT org_id FROM organization WHERE kind = 'group'
+target      orgU:{org_id} a org:FormalOrganization .
+
+mappingId   org-subsidiary
+source      SELECT org_id, parent_org_id FROM organization WHERE kind = 'subsidiary'
+target      orgU:{org_id} a acme:Subsidiary ; org:subOrganizationOf orgU:{parent_org_id} .
+
+mappingId   org-label-en
+source      SELECT org_id, label FROM org_label WHERE lang = 'en'
+target      orgU:{org_id} skos:prefLabel {label}@en .
+
+mappingId   org-label-en-gb
+source      SELECT org_id, label FROM org_label WHERE lang = 'en-GB'
+target      orgU:{org_id} skos:prefLabel {label}@en-GB .
+
+mappingId   org-label-en-us
+source      SELECT org_id, label FROM org_label WHERE lang = 'en-US'
+target      orgU:{org_id} skos:prefLabel {label}@en-US .
+
+mappingId   org-label-de
+source      SELECT org_id, label FROM org_label WHERE lang = 'de'
+target      orgU:{org_id} skos:prefLabel {label}@de .
+
+mappingId   seniority-level
+source      SELECT sl_code, label, ordinal FROM seniority_level
+target      acme:{sl_code} a acme:SeniorityLevel ; rdfs:label {label}@en ; acme:levelOrdinal {ordinal}^^xsd:integer .
+
+mappingId   job-family
+source      SELECT jf_code, label FROM job_family
+target      acme:{jf_code} a acme:JobFamily, skos:Concept ; skos:inScheme acme:JobFamilyScheme ; skos:prefLabel {label}@en .
+
+mappingId   global-role
+source      SELECT gr_code, pref_label FROM global_role
+target      acmeG:{gr_code} a acme:GlobalRole ; skos:inScheme acme:GlobalRoleScheme ; skos:prefLabel {pref_label}@en .
+
+mappingId   global-role-definition
+source      SELECT gr_code, definition FROM global_role WHERE definition IS NOT NULL
+target      acmeG:{gr_code} skos:definition {definition}@en .
+
+mappingId   global-role-family-seniority
+source      SELECT gr_code, jf_code, sl_code FROM global_role
+target      acmeG:{gr_code} acme:hasJobFamily acme:{jf_code} ; acme:hasSeniorityLevel acme:{sl_code} .
+
+mappingId   global-role-broader
+source      SELECT gr_code, broader_gr_code FROM global_role WHERE broader_gr_code IS NOT NULL
+target      acmeG:{gr_code} skos:broader acmeG:{broader_gr_code} .
+
+mappingId   local-role-uk
+source      SELECT localname, pref_label FROM local_role WHERE subsidiary = 'uk'
+target      acmeUK:{localname} a acme:LocalRole ; skos:inScheme acmeUK:RoleScheme ; skos:prefLabel {pref_label}@en-GB ; acme:scopedTo orgU:AcmeUK .
+
+mappingId   local-role-de
+source      SELECT localname, pref_label FROM local_role WHERE subsidiary = 'de'
+target      acmeDE:{localname} a acme:LocalRole ; skos:inScheme acmeDE:RoleScheme ; skos:prefLabel {pref_label}@de ; acme:scopedTo orgU:AcmeDE .
+
+mappingId   local-role-us
+source      SELECT localname, pref_label FROM local_role WHERE subsidiary = 'us'
+target      acmeUS:{localname} a acme:LocalRole ; skos:inScheme acmeUS:RoleScheme ; skos:prefLabel {pref_label}@en-US ; acme:scopedTo orgU:AcmeUS .
+
+mappingId   local-role-alt-uk
+source      SELECT localname, alt_label FROM local_role WHERE subsidiary = 'uk' AND alt_label IS NOT NULL
+target      acmeUK:{localname} skos:altLabel {alt_label}@en-GB .
+
+mappingId   local-role-alt-de
+source      SELECT localname, alt_label FROM local_role WHERE subsidiary = 'de' AND alt_label IS NOT NULL
+target      acmeDE:{localname} skos:altLabel {alt_label}@en .
+
+mappingId   local-role-alt-us
+source      SELECT localname, alt_label FROM local_role WHERE subsidiary = 'us' AND alt_label IS NOT NULL
+target      acmeUS:{localname} skos:altLabel {alt_label}@en-US .
+
+mappingId   local-role-scope-uk
+source      SELECT localname, scope_note FROM local_role WHERE subsidiary = 'uk' AND scope_note IS NOT NULL
+target      acmeUK:{localname} skos:scopeNote {scope_note}@en-GB .
+
+mappingId   local-role-scope-de-de
+source      SELECT localname, scope_note FROM local_role WHERE subsidiary = 'de' AND scope_note IS NOT NULL AND scope_lang = 'de'
+target      acmeDE:{localname} skos:scopeNote {scope_note}@de .
+
+mappingId   local-role-scope-de-en
+source      SELECT localname, scope_note FROM local_role WHERE subsidiary = 'de' AND scope_note IS NOT NULL AND scope_lang = 'en'
+target      acmeDE:{localname} skos:scopeNote {scope_note}@en .
+
+mappingId   local-role-scope-us
+source      SELECT localname, scope_note FROM local_role WHERE subsidiary = 'us' AND scope_note IS NOT NULL
+target      acmeUS:{localname} skos:scopeNote {scope_note}@en-US .
+
+mappingId   role-mapping-uk-close
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'uk' AND match_type = 'closeMatch'
+target      acmeUK:{lr_localname} skos:closeMatch acmeG:{gr_code} .
+
+mappingId   role-mapping-uk-broad
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'uk' AND match_type = 'broadMatch'
+target      acmeUK:{lr_localname} skos:broadMatch acmeG:{gr_code} .
+
+mappingId   role-mapping-de-close
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'de' AND match_type = 'closeMatch'
+target      acmeDE:{lr_localname} skos:closeMatch acmeG:{gr_code} .
+
+mappingId   role-mapping-de-broad
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'de' AND match_type = 'broadMatch'
+target      acmeDE:{lr_localname} skos:broadMatch acmeG:{gr_code} .
+
+mappingId   role-mapping-us-close
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'us' AND match_type = 'closeMatch'
+target      acmeUS:{lr_localname} skos:closeMatch acmeG:{gr_code} .
+
+mappingId   role-mapping-us-broad
+source      SELECT lr_localname, gr_code FROM role_mapping WHERE subsidiary = 'us' AND match_type = 'broadMatch'
+target      acmeUS:{lr_localname} skos:broadMatch acmeG:{gr_code} .
+
+mappingId   mapping-activity
+source      SELECT map_id, gr_code, confidence, review_status, mapping_method, mapped_at FROM role_mapping
+target      mapAct:{map_id} a acme:MappingActivity ; prov:generated acmeG:{gr_code} ; prov:atTime {mapped_at}^^xsd:dateTime ; acme:confidence {confidence}^^xsd:decimal ; acme:reviewStatus {review_status}^^xsd:string ; acme:mappingMethod {mapping_method}^^xsd:string .
+
+mappingId   mapping-activity-used-uk
+source      SELECT map_id, lr_localname FROM role_mapping WHERE subsidiary = 'uk'
+target      mapAct:{map_id} prov:used acmeUK:{lr_localname} .
+
+mappingId   mapping-activity-used-de
+source      SELECT map_id, lr_localname FROM role_mapping WHERE subsidiary = 'de'
+target      mapAct:{map_id} prov:used acmeDE:{lr_localname} .
+
+mappingId   mapping-activity-used-us
+source      SELECT map_id, lr_localname FROM role_mapping WHERE subsidiary = 'us'
+target      mapAct:{map_id} prov:used acmeUS:{lr_localname} .
+
+mappingId   mapping-activity-agent
+source      SELECT map_id, agent_id FROM mapping_agent
+target      mapAct:{map_id} prov:wasAssociatedWith <https://acme.example/{agent_id}> .
+
+mappingId   agent-declaration-person
+source      SELECT DISTINCT agent_id, agent_label FROM mapping_agent WHERE agent_kind = 'Person'
+target      <https://acme.example/{agent_id}> a prov:Person ; rdfs:label {agent_label}^^xsd:string .
+
+mappingId   agent-declaration-software
+source      SELECT DISTINCT agent_id, agent_label FROM mapping_agent WHERE agent_kind = 'SoftwareAgent'
+target      <https://acme.example/{agent_id}> a prov:SoftwareAgent ; rdfs:label {agent_label}^^xsd:string .
+
+mappingId   esco-broad
+source      SELECT gr_code, esco_uri FROM esco_anchor WHERE match_type = 'broadMatch'
+target      acmeG:{gr_code} skos:broadMatch <{esco_uri}> .
+
+mappingId   esco-close
+source      SELECT gr_code, esco_uri FROM esco_anchor WHERE match_type = 'closeMatch'
+target      acmeG:{gr_code} skos:closeMatch <{esco_uri}> .
+
+mappingId   esco-related
+source      SELECT gr_code, esco_uri FROM esco_anchor WHERE match_type = 'relatedMatch'
+target      acmeG:{gr_code} skos:relatedMatch <{esco_uri}> .
+
+mappingId   person
+source      SELECT person_id, name FROM person
+target      p:{person_id} a foaf:Person ; foaf:name {name}^^xsd:string .
+
+mappingId   person-has-membership
+source      SELECT person_id, mem_id FROM membership WHERE linked_from_person = TRUE
+target      p:{person_id} org:hasMembership m:{mem_id} .
+
+mappingId   post-core
+source      SELECT post_id, org_id FROM post
+target      post:{post_id} a org:Post ; org:postIn orgU:{org_id} .
+
+mappingId   post-label-uk
+source      SELECT post_id, label FROM post WHERE subsidiary = 'uk'
+target      post:{post_id} skos:prefLabel {label}@en-GB .
+
+mappingId   post-label-de
+source      SELECT post_id, label FROM post WHERE subsidiary = 'de'
+target      post:{post_id} skos:prefLabel {label}@de .
+
+mappingId   post-label-us
+source      SELECT post_id, label FROM post WHERE subsidiary = 'us'
+target      post:{post_id} skos:prefLabel {label}@en-US .
+
+mappingId   post-role-uk
+source      SELECT post_id, role_localname FROM post WHERE subsidiary = 'uk'
+target      post:{post_id} org:role acmeUK:{role_localname} .
+
+mappingId   post-role-de
+source      SELECT post_id, role_localname FROM post WHERE subsidiary = 'de'
+target      post:{post_id} org:role acmeDE:{role_localname} .
+
+mappingId   post-role-us
+source      SELECT post_id, role_localname FROM post WHERE subsidiary = 'us'
+target      post:{post_id} org:role acmeUS:{role_localname} .
+
+mappingId   post-reports-to
+source      SELECT post_id, reports_to_post_id FROM post WHERE reports_to_post_id IS NOT NULL
+target      post:{post_id} org:reportsTo post:{reports_to_post_id} .
+
+mappingId   membership-core
+source      SELECT mem_id, person_id, org_id FROM membership
+target      m:{mem_id} a org:Membership ; org:member p:{person_id} ; org:organization orgU:{org_id} .
+
+mappingId   membership-role-uk
+source      SELECT mem_id, role_localname FROM membership WHERE subsidiary = 'uk'
+target      m:{mem_id} org:role acmeUK:{role_localname} .
+
+mappingId   membership-role-de
+source      SELECT mem_id, role_localname FROM membership WHERE subsidiary = 'de'
+target      m:{mem_id} org:role acmeDE:{role_localname} .
+
+mappingId   membership-role-us
+source      SELECT mem_id, role_localname FROM membership WHERE subsidiary = 'us'
+target      m:{mem_id} org:role acmeUS:{role_localname} .
+
+mappingId   membership-via-post
+source      SELECT mem_id, via_post_id FROM membership WHERE via_post_id IS NOT NULL
+target      m:{mem_id} acme:viaPost post:{via_post_id} .
+
+mappingId   membership-interval-begin
+source      SELECT mem_id, begin_date FROM membership
+target      m:{mem_id} org:memberDuring <https://acme.example/interval/{mem_id}> . <https://acme.example/interval/{mem_id}> a time:Interval ; time:hasBeginning <https://acme.example/instant/{mem_id}-begin> . <https://acme.example/instant/{mem_id}-begin> time:inXSDDate {begin_date}^^xsd:date .
+
+mappingId   membership-interval-end
+source      SELECT mem_id, end_date FROM membership WHERE end_date IS NOT NULL
+target      <https://acme.example/interval/{mem_id}> time:hasEnd <https://acme.example/instant/{mem_id}-end> . <https://acme.example/instant/{mem_id}-end> time:inXSDDate {end_date}^^xsd:date .
+
+]]
