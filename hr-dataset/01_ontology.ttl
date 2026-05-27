@@ -1,0 +1,179 @@
+# =============================================================================
+# AcmeCorp HR Ontology — Schema (TBox)
+#
+# Defines the AcmeCorp-specific extensions on top of standard vocabularies:
+#   - W3C ORG  (org:)   for organizational structure
+#   - SKOS              for concept schemes and mapping relations
+#   - FOAF              for people
+#   - PROV-O            for mapping provenance
+#   - OWL-Time          for membership intervals
+# =============================================================================
+
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:   <http://www.w3.org/ns/org#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix acme:  <https://acme.example/ontology/> .
+
+# -----------------------------------------------------------------------------
+# Ontology metadata
+# -----------------------------------------------------------------------------
+<https://acme.example/ontology/> a owl:Ontology ;
+    dcterms:title "AcmeCorp HR Ontology"@en ;
+    dcterms:description
+      "Multi-subsidiary HR role and competency ontology for AcmeCorp. Extends "
+      "W3C ORG with seniority levels, job families, mapping provenance, and "
+      "alignment to ESCO."@en ;
+    owl:versionInfo "0.1.0" ;
+    dcterms:created "2026-05-25"^^xsd:date ;
+    rdfs:seeAlso <https://www.w3.org/TR/vocab-org/> ,
+                 <https://data.europa.eu/esco/model> .
+
+# -----------------------------------------------------------------------------
+# Classes specific to AcmeCorp
+# -----------------------------------------------------------------------------
+
+acme:Subsidiary a owl:Class ;
+    rdfs:subClassOf org:FormalOrganization ;
+    rdfs:label "Subsidiary"@en ;
+    rdfs:comment "A wholly-owned legal subsidiary of AcmeCorp."@en .
+
+acme:GlobalRole a owl:Class ;
+    rdfs:subClassOf org:Role , skos:Concept ;
+    rdfs:label "Global Role"@en ;
+    rdfs:comment
+      "A role defined in the AcmeCorp global role catalog. Subsidiary-specific "
+      "roles map to one of these via SKOS mapping relations."@en .
+
+acme:LocalRole a owl:Class ;
+    rdfs:subClassOf org:Role , skos:Concept ;
+    rdfs:label "Local Role"@en ;
+    rdfs:comment
+      "A role as defined inside a single subsidiary. Local roles use the "
+      "subsidiary's working language and seniority conventions."@en .
+
+acme:JobFamily a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Job Family"@en ;
+    rdfs:comment
+      "A grouping of related global roles (e.g. Engineering, Sales, Finance)."@en .
+
+acme:SeniorityLevel a owl:Class ;
+    rdfs:label "Seniority Level"@en ;
+    rdfs:comment
+      "An ordinal seniority level. AcmeCorp uses L1 (entry) through L9 (executive)."@en .
+
+acme:MappingActivity a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Mapping Activity"@en ;
+    rdfs:comment
+      "A prov:Activity recording the creation, review, or modification of a "
+      "SKOS mapping between a local role and a global role."@en .
+
+# -----------------------------------------------------------------------------
+# Properties
+# -----------------------------------------------------------------------------
+
+acme:scopedTo a owl:ObjectProperty ;
+    rdfs:domain acme:LocalRole ;
+    rdfs:range  acme:Subsidiary ;
+    rdfs:label "scoped to"@en ;
+    rdfs:comment "Asserts that a local role is defined within the named subsidiary."@en .
+
+acme:hasJobFamily a owl:ObjectProperty ;
+    rdfs:domain acme:GlobalRole ;
+    rdfs:range  acme:JobFamily ;
+    rdfs:label "has job family"@en .
+
+acme:hasSeniorityLevel a owl:ObjectProperty ;
+    rdfs:domain acme:GlobalRole ;
+    rdfs:range  acme:SeniorityLevel ;
+    rdfs:label "has seniority level"@en .
+
+acme:levelOrdinal a owl:DatatypeProperty ;
+    rdfs:domain acme:SeniorityLevel ;
+    rdfs:range  xsd:integer ;
+    rdfs:label "level ordinal"@en ;
+    rdfs:comment "Integer 1..9, where 1 is most junior and 9 is most senior."@en .
+
+acme:viaPost a owl:ObjectProperty ;
+    rdfs:domain org:Membership ;
+    rdfs:range  org:Post ;
+    rdfs:label "via post"@en ;
+    rdfs:comment
+      "Connects a membership to the specific Post (named seat) the person occupies."@en .
+
+acme:confidence a owl:DatatypeProperty ;
+    rdfs:domain acme:MappingActivity ;
+    rdfs:range  xsd:decimal ;
+    rdfs:label "confidence"@en ;
+    rdfs:comment "Confidence score in [0,1] for an LLM- or human-drafted mapping."@en .
+
+acme:mappingMethod a owl:DatatypeProperty ;
+    rdfs:domain acme:MappingActivity ;
+    rdfs:range  xsd:string ;
+    rdfs:label "mapping method"@en ;
+    rdfs:comment
+      "Human-readable note: 'LLM-drafted, human-approved', 'manual', 'rule-based', etc."@en .
+
+acme:reviewStatus a owl:DatatypeProperty ;
+    rdfs:domain acme:MappingActivity ;
+    rdfs:range  xsd:string ;
+    rdfs:label "review status"@en ;
+    rdfs:comment "One of: 'draft', 'in-review', 'approved', 'rejected'."@en .
+
+# -----------------------------------------------------------------------------
+# Seniority level individuals (shared across the org)
+# -----------------------------------------------------------------------------
+acme:L1  a acme:SeniorityLevel ; rdfs:label "L1 - Entry"@en       ; acme:levelOrdinal 1 .
+acme:L2  a acme:SeniorityLevel ; rdfs:label "L2 - Associate"@en   ; acme:levelOrdinal 2 .
+acme:L3  a acme:SeniorityLevel ; rdfs:label "L3 - Mid"@en         ; acme:levelOrdinal 3 .
+acme:L4  a acme:SeniorityLevel ; rdfs:label "L4 - Senior"@en      ; acme:levelOrdinal 4 .
+acme:L5  a acme:SeniorityLevel ; rdfs:label "L5 - Staff"@en       ; acme:levelOrdinal 5 .
+acme:L6  a acme:SeniorityLevel ; rdfs:label "L6 - Principal"@en   ; acme:levelOrdinal 6 .
+acme:L7  a acme:SeniorityLevel ; rdfs:label "L7 - Director"@en    ; acme:levelOrdinal 7 .
+acme:L8  a acme:SeniorityLevel ; rdfs:label "L8 - VP"@en          ; acme:levelOrdinal 8 .
+acme:L9  a acme:SeniorityLevel ; rdfs:label "L9 - Executive"@en   ; acme:levelOrdinal 9 .
+
+# -----------------------------------------------------------------------------
+# Job family concept scheme + individuals
+# -----------------------------------------------------------------------------
+acme:JobFamilyScheme a skos:ConceptScheme ;
+    skos:prefLabel "AcmeCorp Job Family Scheme"@en .
+
+acme:Family_Engineering a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Engineering"@en .
+
+acme:Family_Product a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Product Management"@en .
+
+acme:Family_Sales a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Sales"@en .
+
+acme:Family_Marketing a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Marketing"@en .
+
+acme:Family_Finance a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Finance"@en .
+
+acme:Family_People a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "People / HR"@en .
+
+acme:Family_Operations a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Operations"@en .
+
+acme:Family_CustomerSupport a acme:JobFamily , skos:Concept ;
+    skos:inScheme acme:JobFamilyScheme ;
+    skos:prefLabel "Customer Support"@en .

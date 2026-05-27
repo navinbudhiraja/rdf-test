@@ -1,0 +1,112 @@
+# =============================================================================
+# AcmeUK local role vocabulary
+#
+# British-style titles used inside the UK subsidiary. "Senior X", "Lead Y",
+# "Head of Z". These are the actual titles people put on their LinkedIn
+# profiles and that appear in the UK HRIS — they are NOT harmonized.
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeUK: <https://acme.example/uk/role/> .
+
+acmeUK:RoleScheme a skos:ConceptScheme ;
+    skos:prefLabel "AcmeUK Role Scheme"@en ;
+    rdfs:comment "Local role vocabulary of AcmeUK Ltd."@en .
+
+# AcmeUK organization is declared in 08_instance_data.ttl;
+# here we just reference it via acme:scopedTo.
+
+# -----------------------------------------------------------------------------
+# Engineering
+# -----------------------------------------------------------------------------
+
+acmeUK:SoftwareEngineer a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Software Engineer"@en-GB ;
+    skos:altLabel "SWE"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:SeniorSoftwareEngineer a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Senior Software Engineer"@en-GB ;
+    skos:altLabel "Senior SWE"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:LeadSoftwareEngineer a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Lead Software Engineer"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:EngineeringManager a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Engineering Manager"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:HeadOfEngineering a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Head of Engineering"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:DataEngineer a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Data Engineer"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+# -----------------------------------------------------------------------------
+# Product
+# -----------------------------------------------------------------------------
+
+acmeUK:ProductManager a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Product Manager"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:SeniorProductManager a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Senior Product Manager"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+# -----------------------------------------------------------------------------
+# Sales / Marketing
+# -----------------------------------------------------------------------------
+
+acmeUK:AccountManager a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Account Manager"@en-GB ;
+    skos:scopeNote
+      "UK uses 'Account Manager' for the role US calls 'Account Executive'."@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:HeadOfMarketing a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Head of Marketing"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+# -----------------------------------------------------------------------------
+# Finance / Ops / HR / Support
+# -----------------------------------------------------------------------------
+
+acmeUK:FinancialAnalyst a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Financial Analyst"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:PeoplePartner a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "People Partner"@en-GB ;
+    skos:scopeNote "UK has dropped 'HR' in favour of 'People' branding."@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:CustomerSuccessAssociate a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Customer Success Associate"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .
+
+acmeUK:OperationsLead a acme:LocalRole ;
+    skos:inScheme acmeUK:RoleScheme ;
+    skos:prefLabel "Operations Lead"@en-GB ;
+    acme:scopedTo <https://acme.example/org/AcmeUK> .

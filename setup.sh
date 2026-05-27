@@ -99,6 +99,49 @@ rm -f "$PROPS.bak"
 echo ""
 echo "    Updated ontop/database.properties with absolute DB path."
 
+# ── 7. Initialise the HR DuckDB database (second dataset) ──────────────────
+HR_DB_FILE="$PROJECT_DIR/hr.ddb"
+HR_SQL="$PROJECT_DIR/data/hr.sql"
+if [ ! -f "$HR_SQL" ]; then
+    echo ""
+    echo "==> Generating data/hr.sql from the HR Turtle dataset..."
+    pip3 install rdflib --quiet
+    python3 "$PROJECT_DIR/hr-dataset/build_relational.py"
+fi
+
+echo ""
+echo "==> Initialising HR DuckDB database..."
+python3 - <<PYEOF
+import duckdb, os
+db_path = "$HR_DB_FILE"
+sql_path = "$HR_SQL"
+if os.path.exists(db_path):
+    os.remove(db_path)
+con = duckdb.connect(db_path)
+# Run the whole script in one call so DuckDB's parser handles semicolons
+# that occur inside string literals (a naive split(";") would corrupt them).
+con.execute(open(sql_path).read())
+con.close()
+print(f"    Database written to: {db_path}")
+PYEOF
+
+python3 - <<PYEOF
+import duckdb
+con = duckdb.connect("$HR_DB_FILE", read_only=True)
+tables = ["organization", "global_role", "local_role", "role_mapping",
+          "mapping_agent", "esco_anchor", "person", "post", "membership"]
+for t in tables:
+    n = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+    print(f"    {t:25s}: {n} rows")
+con.close()
+PYEOF
+
+HR_PROPS="$PROJECT_DIR/ontop/hr_database.properties"
+sed -i.bak "s|jdbc.url=.*|jdbc.url=jdbc:duckdb:$HR_DB_FILE|" "$HR_PROPS"
+rm -f "$HR_PROPS.bak"
+echo ""
+echo "    Updated ontop/hr_database.properties with absolute DB path."
+
 # ── Done ────────────────────────────────────────────────────────────────────
 echo ""
 echo "================================================================"
@@ -107,22 +150,23 @@ echo "================================================================"
 echo ""
 echo " Next steps:"
 echo ""
-echo " 1. Start the Ontop SPARQL endpoint (in a separate terminal):"
+echo " 1. Start the Ontop SPARQL endpoint(s) (each in its own terminal):"
 echo ""
 echo "    cd $PROJECT_DIR"
-echo "    ./ontop-cli/ontop endpoint \\"
-echo "        -m ontop/university.obda \\"
-echo "        -t ontop/university.ttl \\"
-echo "        -p ontop/database.properties \\"
-echo "        --cors-allowed-origins='*'"
-echo ""
-echo "    SPARQL UI will be at: http://localhost:8080/"
+echo "    ./start_ontop.sh           # university dataset -> http://localhost:8080/"
+echo "    ./start_ontop.sh hr        # AcmeCorp HR dataset -> http://localhost:8081/"
 echo ""
 echo " 2. Set your Anthropic API key:"
 echo "    export ANTHROPIC_API_KEY=your_key_here"
 echo ""
-echo " 3. Ask a question:"
+echo " 3. Ask a question (default dataset is 'university'):"
 echo "    python src/nl_query.py \"List all students\""
 echo "    python src/nl_query.py \"Which professors teach more than one course?\""
-echo "    python src/nl_query.py \"Who is enrolled in Database Systems?\""
+echo ""
+echo "    Or query the HR dataset (SPARQL-only) with --dataset hr:"
+echo "    python src/nl_query.py --dataset hr \"Which employees are software engineers across all subsidiaries?\""
+echo "    python src/nl_query.py --dataset hr \"Which role mappings need review?\""
+echo ""
+echo " 4. Verify the HR round-trip (all 7 gold queries; needs the hr endpoint up):"
+echo "    python hr-dataset/tests/verify_ontop.py"
 echo ""

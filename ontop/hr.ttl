@@ -1,0 +1,36 @@
+# AcmeCorp HR ontology — TBox used by Ontop (-t).
+# Instance data (roles, people, mappings, …) is produced from the relational
+# tables by ontop/hr.obda. This file only declares classes and properties.
+
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:   <http://www.w3.org/ns/org#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix time:  <http://www.w3.org/2006/time#> .
+@prefix acme:  <https://acme.example/ontology/> .
+
+<https://acme.example/ontology/> a owl:Ontology .
+
+#-- Classes --
+acme:Subsidiary      a owl:Class ; rdfs:subClassOf org:FormalOrganization .
+acme:GlobalRole      a owl:Class ; rdfs:subClassOf org:Role , skos:Concept .
+acme:LocalRole       a owl:Class ; rdfs:subClassOf org:Role , skos:Concept .
+acme:JobFamily       a owl:Class ; rdfs:subClassOf skos:Concept .
+acme:SeniorityLevel  a owl:Class .
+acme:MappingActivity a owl:Class ; rdfs:subClassOf prov:Activity .
+
+#-- Object properties --
+acme:scopedTo         a owl:ObjectProperty ; rdfs:domain acme:LocalRole  ; rdfs:range acme:Subsidiary .
+acme:hasJobFamily     a owl:ObjectProperty ; rdfs:domain acme:GlobalRole ; rdfs:range acme:JobFamily .
+acme:hasSeniorityLevel a owl:ObjectProperty ; rdfs:domain acme:GlobalRole ; rdfs:range acme:SeniorityLevel .
+acme:viaPost          a owl:ObjectProperty ; rdfs:domain org:Membership  ; rdfs:range org:Post .
+
+#-- Datatype properties --
+acme:levelOrdinal  a owl:DatatypeProperty ; rdfs:domain acme:SeniorityLevel  ; rdfs:range xsd:integer .
+acme:confidence    a owl:DatatypeProperty ; rdfs:domain acme:MappingActivity ; rdfs:range xsd:decimal .
+acme:mappingMethod a owl:DatatypeProperty ; rdfs:domain acme:MappingActivity ; rdfs:range xsd:string .
+acme:reviewStatus  a owl:DatatypeProperty ; rdfs:domain acme:MappingActivity ; rdfs:range xsd:string .

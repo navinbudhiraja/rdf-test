@@ -4,6 +4,10 @@
 
 Natural Language → SPARQL + SQL query engine over a university dataset. A user asks a question in plain English; the system uses Claude API to generate both a SPARQL query (for the Ontop VKG endpoint) and a SQL query (for DuckDB) in parallel, executes both, and displays results side-by-side. Also exposed as an MCP server so Claude can call it as a tool.
 
+**Two datasets** are queryable, selected via `--dataset` on the CLI (default `university`) and via dedicated MCP tools:
+- **university** — dual SPARQL + SQL, side-by-side (Ontop on :8080 + in-memory DuckDB).
+- **hr** — the AcmeCorp multi-subsidiary HR knowledge graph, **SPARQL-only** (Ontop on :8081). HR data is modeled relationally (just like a real HRIS) and Ontop maps it to RDF; the rich SKOS/property-path graph is queried with SPARQL, so there is no hand-written SQL side. See "Second Dataset: AcmeCorp HR" below.
+
 ---
 
 ## Architecture
@@ -33,18 +37,21 @@ Ontop at localhost:8080    In-memory DuckDB
 
 | File | Role |
 |------|------|
-| `src/nl_translator.py` | Calls Claude API (`claude-sonnet-4-6`) with prompt caching; runs SPARQL and SQL generation concurrently via `ThreadPoolExecutor` |
-| `src/nl_query.py` | CLI entry point; orchestrates translate → execute → display with `rich` panels/tables |
-| `src/mcp_server.py` | FastMCP server exposing 3 tools: `ask_university`, `run_sql`, `get_schema` |
-| `src/slack_bot.py` | Slack bot (Socket Mode); listens for @mentions and DMs, runs the full NL→SPARQL+SQL pipeline, posts results as Slack blocks |
-| `src/sparql_executor.py` | HTTP POST to Ontop SPARQL endpoint at `http://localhost:8080/sparql`; returns pandas DataFrame |
-| `src/sql_executor.py` | Executes SQL against in-memory DuckDB loaded from `data/university.sql`; in-memory avoids JDBC file-lock conflict with Ontop |
-| `ontop/university.obda` | OBDA mappings: 13 rules converting SQL rows → RDF triples |
-| `ontop/university.ttl` | OWL 2 QL ontology (Person, Student, AcademicMember subclasses, Course, teaches, isEnrolledIn) |
-| `ontop/database.properties` | Ontop JDBC config pointing at `university.ddb` |
-| `data/university.sql` | Relational schema + seed data (5 tables, ~30 rows total) |
-| `setup.sh` | One-time setup: downloads Ontop v5.5.0 CLI, DuckDB JDBC driver, creates `university.ddb` |
-| `start_ontop.sh` | Starts Ontop SPARQL endpoint in foreground on port 8080 |
+| `src/nl_translator.py` | Calls Claude API (`claude-sonnet-4-6`) with prompt caching; dataset-aware `translate(question, dataset)` runs the dataset's supported languages concurrently. Holds the university SPARQL/SQL prompts and the HR SPARQL prompt |
+| `src/datasets.py` | Registry of datasets → label, supported languages, SPARQL endpoint, SQL source. CLI + MCP route through it |
+| `src/nl_query.py` | CLI entry point; `--dataset {university,hr}` flag; language-aware display (side-by-side for university, SPARQL-only for hr) |
+| `src/mcp_server.py` | FastMCP server. University tools: `ask_university`, `run_sql`, `get_schema`. HR tools: `ask_hr`, `run_sparql_hr`, `get_hr_schema` |
+| `src/slack_bot.py` | Slack bot (Socket Mode); university dual pipeline (unchanged) |
+| `src/sparql_executor.py` | HTTP POST to an Ontop SPARQL endpoint (`execute(sparql, endpoint=…)`, default :8080); returns pandas DataFrame |
+| `src/sql_executor.py` | Executes SQL against in-memory DuckDB loaded from `data/university.sql` (university only); in-memory avoids JDBC file-lock conflict with Ontop |
+| `ontop/university.obda` / `.ttl` / `database.properties` | University OBDA mappings, ontology, JDBC config (→ `university.ddb`) |
+| `ontop/hr.obda` / `hr.ttl` / `hr_database.properties` | HR OBDA mappings (rebuild the full RDF graph from the HR tables), HR TBox, JDBC config (→ `hr.ddb`) |
+| `data/university.sql` / `data/hr.sql` | Relational schema + seed data for each dataset (`hr.sql` is generated, see below) |
+| `hr-dataset/` | The source HR dataset (9 Turtle files), example queries, and tests — see "Second Dataset" |
+| `hr-dataset/build_relational.py` | One-off: loads the HR Turtle via rdflib and writes `data/hr.sql` (DDL + INSERTs). Source of truth = the Turtle |
+| `hr-dataset/tests/verify_ontop.py` | Round-trip test: runs every `queries/*.rq` against the rdflib oracle AND the HR Ontop endpoint and asserts equality |
+| `setup.sh` | One-time setup: downloads Ontop v5.5.0 CLI + DuckDB JDBC; builds `university.ddb` and `hr.ddb` |
+| `start_ontop.sh` | `./start_ontop.sh [university\|hr]` — starts the chosen Ontop endpoint (university :8080, hr :8081) |
 
 ---
 
@@ -69,6 +76,47 @@ Ontop at localhost:8080    In-memory DuckDB
 - `voc:Course`
 - Properties: `foaf:firstName`, `foaf:lastName`, `voc:courseTitle`, `voc:teaches`, `voc:isEnrolledIn`, `voc:isTaughtBy`
 - IRI patterns: `:student/{s_id}`, `:academic/{a_id}`, `:course/{c_id}`
+
+---
+
+## Second Dataset: AcmeCorp HR (SPARQL-only)
+
+A synthetic multinational HR knowledge graph: **AcmeCorp** with three subsidiaries
+(**AcmeUK, AcmeDE, AcmeUS**). Each subsidiary has its own LOCAL job-title vocabulary;
+all local roles map via SKOS (`closeMatch`/`broadMatch`) to a single GLOBAL role catalog,
+which is anchored to real ESCO/ISCO occupations. Demonstrates cross-subsidiary role
+reconciliation (Role / Post / Membership separation, graded SKOS mappings, mapping
+provenance, ESCO alignment).
+
+**Source of truth:** the 9 Turtle files in `hr-dataset/` (`01_ontology.ttl` … `09_shapes.shacl.ttl`).
+`hr-dataset/build_relational.py` converts them into the relational schema `data/hr.sql`
+(loaded in memory with a fix that merges multi-line string literals — the shipped Turtle
+splits some descriptions across adjacent literals, which is invalid Turtle).
+
+**Why relational + Ontop (not native RDF):** in the real-world use case the HR data is
+genuinely relational, so a relational source + OBDA is representative of production.
+Ontop rewrites SPARQL → SQL against the HR tables; the Turtle is never read at runtime.
+
+**Why SPARQL-only:** the dataset's value is its SKOS property-path / graph structure,
+which is awkward in hand-written SQL, so the HR pipeline generates only SPARQL.
+
+### HR relational schema (`data/hr.sql`, 12 tables)
+
+`organization`, `org_label`, `seniority_level`, `job_family`, `global_role`,
+`local_role`, `role_mapping`, `mapping_agent`, `esco_anchor`, `person`, `post`,
+`membership`. Codes/IRIs are chosen so `ontop/hr.obda` reconstructs the exact original
+IRIs (e.g. `acmeG:SoftwareEngineerL4`, `acmeUK:SeniorSoftwareEngineer`, `p:alice_01`).
+n-ary `org:Membership` intervals are rebuilt as minted `interval`/`instant` IRIs.
+
+### Verification (round-trip correctness)
+
+`hr-dataset/tests/verify_ontop.py` is **data-driven**: it globs `hr-dataset/queries/*.rq`,
+runs each against the **rdflib oracle** (original Turtle) and the **HR Ontop endpoint**
+(:8081), and asserts the result sets match (numeric/datetime canonicalized,
+order-independent). Adding a test later = drop a new `NN_name.rq` into
+`hr-dataset/queries/` — it's picked up automatically; the oracle computes the expected
+answer. (`hr-dataset/tests/load_and_query.py` separately validates the oracle itself
+against `expected_results.md` via rdflib, and runs the SHACL shapes.)
 
 ---
 

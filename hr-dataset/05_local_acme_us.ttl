@@ -1,0 +1,143 @@
+# =============================================================================
+# AcmeUS local role vocabulary
+#
+# US-style numbered career ladder ("Software Engineer III", "Staff Software
+# Engineer"). Title-and-level combinations follow FAANG conventions.
+# Includes one role (AreaVP) that maps to global with a broadMatch (not
+# closeMatch) to reflect a real seniority asymmetry between subsidiaries.
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeUS: <https://acme.example/us/role/> .
+
+acmeUS:RoleScheme a skos:ConceptScheme ;
+    skos:prefLabel "AcmeUS Role Scheme"@en-US .
+
+# -----------------------------------------------------------------------------
+# Engineering
+# -----------------------------------------------------------------------------
+
+acmeUS:SWE_II a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Software Engineer II"@en-US ;
+    skos:altLabel "Mid SWE"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:SWE_III a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Software Engineer III"@en-US ;
+    skos:altLabel "Senior Software Engineer"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:StaffSWE a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Staff Software Engineer"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:PrincipalSWE a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Principal Software Engineer"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:EM a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Engineering Manager"@en-US ;
+    skos:altLabel "EM"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:DirectorOfEngineering a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Director of Engineering"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:DataEngineer a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Data Engineer"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:DataScientist a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Data Scientist"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+# -----------------------------------------------------------------------------
+# Product
+# -----------------------------------------------------------------------------
+
+acmeUS:PM a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Product Manager"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:SeniorPM a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Senior Product Manager"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+# -----------------------------------------------------------------------------
+# Sales (note the seniority oddity for AreaVP)
+# -----------------------------------------------------------------------------
+
+acmeUS:AE a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Account Executive"@en-US ;
+    skos:altLabel "AE"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:RegionalSalesManager a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Regional Sales Manager"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:AreaVPOfSales a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Area VP of Sales"@en-US ;
+    skos:scopeNote
+      "AcmeUS uses 'Area VP' for what is, organizationally, a senior regional "
+      "sales director — not a true global VP. Mapped via broadMatch, not "
+      "closeMatch, to the global VPSalesL8."@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+# -----------------------------------------------------------------------------
+# Marketing / Finance / HR / Support
+# -----------------------------------------------------------------------------
+
+acmeUS:MarketingManager a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Marketing Manager"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:DirectorOfMarketing a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Director of Marketing"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:FinancialAnalyst a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Financial Analyst"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:FinanceManager a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Finance Manager"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:HRBP a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "HR Business Partner"@en-US ;
+    skos:altLabel "HRBP"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:TechnicalRecruiter a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Technical Recruiter"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .
+
+acmeUS:CustomerSupportSpecialist a acme:LocalRole ;
+    skos:inScheme acmeUS:RoleScheme ;
+    skos:prefLabel "Customer Support Specialist"@en-US ;
+    acme:scopedTo <https://acme.example/org/AcmeUS> .

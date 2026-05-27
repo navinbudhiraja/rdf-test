@@ -1,0 +1,673 @@
+# =============================================================================
+# Instance data: organizations, posts, people, memberships
+#
+# ~40 employees distributed across the three subsidiaries. Memberships use
+# the W3C ORG n-ary pattern: org:Membership reifies the relationship between
+# a person, an organization, a role, and (via acme:viaPost) a specific Post,
+# bounded by a time interval.
+#
+# Includes:
+#   - reporting lines via org:reportsTo on Posts
+#   - one open Post with no current membership (eve_05)
+#   - one historical membership with a memberDuring/hasEnd date
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
+@prefix time:   <http://www.w3.org/2006/time#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeUK: <https://acme.example/uk/role/> .
+@prefix acmeDE: <https://acme.example/de/role/> .
+@prefix acmeUS: <https://acme.example/us/role/> .
+
+@prefix orgU:   <https://acme.example/org/> .
+@prefix p:      <https://acme.example/person/> .
+@prefix post:   <https://acme.example/post/> .
+@prefix m:      <https://acme.example/membership/> .
+
+# -----------------------------------------------------------------------------
+# Organizations
+# -----------------------------------------------------------------------------
+
+orgU:AcmeGroup  a org:FormalOrganization ;
+    skos:prefLabel "Acme Group plc"@en .
+
+orgU:AcmeUK  a acme:Subsidiary ;
+    skos:prefLabel "Acme UK Ltd"@en-GB ;
+    org:subOrganizationOf orgU:AcmeGroup .
+
+orgU:AcmeDE  a acme:Subsidiary ;
+    skos:prefLabel "Acme Deutschland GmbH"@de , "Acme Germany GmbH"@en ;
+    org:subOrganizationOf orgU:AcmeGroup .
+
+orgU:AcmeUS  a acme:Subsidiary ;
+    skos:prefLabel "Acme USA Inc."@en-US ;
+    org:subOrganizationOf orgU:AcmeGroup .
+
+# -----------------------------------------------------------------------------
+# AcmeUK people, posts, memberships (~13 employees)
+# -----------------------------------------------------------------------------
+
+# Alice Chen - Senior SWE - London Payments team
+p:alice_01 a foaf:Person ; foaf:name "Alice Chen" ;
+    org:hasMembership m:alice_01 .
+post:uk_001 a org:Post ;
+    skos:prefLabel "Senior SWE, London Payments"@en-GB ;
+    org:role acmeUK:SeniorSoftwareEngineer ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_005 .
+m:alice_01 a org:Membership ;
+    org:member p:alice_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:SeniorSoftwareEngineer ;
+    acme:viaPost post:uk_001 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-09-01"^^xsd:date ] ] .
+
+# Bob Singh - Software Engineer - London Payments team
+p:bob_01 a foaf:Person ; foaf:name "Bob Singh" ;
+    org:hasMembership m:bob_01 .
+post:uk_002 a org:Post ;
+    skos:prefLabel "Software Engineer, London Payments"@en-GB ;
+    org:role acmeUK:SoftwareEngineer ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_005 .
+m:bob_01 a org:Membership ;
+    org:member p:bob_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:SoftwareEngineer ;
+    acme:viaPost post:uk_002 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-01-15"^^xsd:date ] ] .
+
+# Carol O'Brien - Lead SWE - London Payments
+p:carol_01 a foaf:Person ; foaf:name "Carol O'Brien" ;
+    org:hasMembership m:carol_01 .
+post:uk_003 a org:Post ;
+    skos:prefLabel "Lead Software Engineer, London Payments"@en-GB ;
+    org:role acmeUK:LeadSoftwareEngineer ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_005 .
+m:carol_01 a org:Membership ;
+    org:member p:carol_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:LeadSoftwareEngineer ;
+    acme:viaPost post:uk_003 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2021-04-01"^^xsd:date ] ] .
+
+# David Patel - Data Engineer - London Data Platform
+p:david_01 a foaf:Person ; foaf:name "David Patel" ;
+    org:hasMembership m:david_01 .
+post:uk_004 a org:Post ;
+    skos:prefLabel "Data Engineer, London Data Platform"@en-GB ;
+    org:role acmeUK:DataEngineer ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_006 .
+m:david_01 a org:Membership ;
+    org:member p:david_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:DataEngineer ;
+    acme:viaPost post:uk_004 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-06-12"^^xsd:date ] ] .
+
+# Emma Walker - Engineering Manager - London Payments (manages Alice, Bob, Carol)
+p:emma_01 a foaf:Person ; foaf:name "Emma Walker" ;
+    org:hasMembership m:emma_01 .
+post:uk_005 a org:Post ;
+    skos:prefLabel "Engineering Manager, London Payments"@en-GB ;
+    org:role acmeUK:EngineeringManager ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_007 .
+m:emma_01 a org:Membership ;
+    org:member p:emma_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:EngineeringManager ;
+    acme:viaPost post:uk_005 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2020-02-03"^^xsd:date ] ] .
+
+# Frank Lim - Engineering Manager - London Data Platform (manages David)
+p:frank_01 a foaf:Person ; foaf:name "Frank Lim" ;
+    org:hasMembership m:frank_01 .
+post:uk_006 a org:Post ;
+    skos:prefLabel "Engineering Manager, Data Platform"@en-GB ;
+    org:role acmeUK:EngineeringManager ;
+    org:postIn orgU:AcmeUK ;
+    org:reportsTo post:uk_007 .
+m:frank_01 a org:Membership ;
+    org:member p:frank_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:EngineeringManager ;
+    acme:viaPost post:uk_006 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-08-15"^^xsd:date ] ] .
+
+# Grace Mukherjee - Head of Engineering, UK
+p:grace_01 a foaf:Person ; foaf:name "Grace Mukherjee" ;
+    org:hasMembership m:grace_01 .
+post:uk_007 a org:Post ;
+    skos:prefLabel "Head of Engineering, UK"@en-GB ;
+    org:role acmeUK:HeadOfEngineering ;
+    org:postIn orgU:AcmeUK .
+m:grace_01 a org:Membership ;
+    org:member p:grace_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:HeadOfEngineering ;
+    acme:viaPost post:uk_007 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2018-11-12"^^xsd:date ] ] .
+
+# Hannah Smith - Senior Product Manager
+p:hannah_01 a foaf:Person ; foaf:name "Hannah Smith" ;
+    org:hasMembership m:hannah_01 .
+post:uk_008 a org:Post ;
+    skos:prefLabel "Senior Product Manager, Payments"@en-GB ;
+    org:role acmeUK:SeniorProductManager ;
+    org:postIn orgU:AcmeUK .
+m:hannah_01 a org:Membership ;
+    org:member p:hannah_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:SeniorProductManager ;
+    acme:viaPost post:uk_008 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-01-09"^^xsd:date ] ] .
+
+# Ian Davies - Account Manager
+p:ian_01 a foaf:Person ; foaf:name "Ian Davies" ;
+    org:hasMembership m:ian_01 .
+post:uk_009 a org:Post ;
+    skos:prefLabel "Account Manager, EMEA"@en-GB ;
+    org:role acmeUK:AccountManager ;
+    org:postIn orgU:AcmeUK .
+m:ian_01 a org:Membership ;
+    org:member p:ian_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:AccountManager ;
+    acme:viaPost post:uk_009 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-03-04"^^xsd:date ] ] .
+
+# Jane Holt - Financial Analyst
+p:jane_01 a foaf:Person ; foaf:name "Jane Holt" ;
+    org:hasMembership m:jane_01 .
+post:uk_010 a org:Post ;
+    skos:prefLabel "Financial Analyst, UK"@en-GB ;
+    org:role acmeUK:FinancialAnalyst ;
+    org:postIn orgU:AcmeUK .
+m:jane_01 a org:Membership ;
+    org:member p:jane_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:FinancialAnalyst ;
+    acme:viaPost post:uk_010 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-09-01"^^xsd:date ] ] .
+
+# Kate Adler - People Partner
+p:kate_01 a foaf:Person ; foaf:name "Kate Adler" ;
+    org:hasMembership m:kate_01 .
+post:uk_011 a org:Post ;
+    skos:prefLabel "People Partner, UK Engineering"@en-GB ;
+    org:role acmeUK:PeoplePartner ;
+    org:postIn orgU:AcmeUK .
+m:kate_01 a org:Membership ;
+    org:member p:kate_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:PeoplePartner ;
+    acme:viaPost post:uk_011 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-11-20"^^xsd:date ] ] .
+
+# Luke Brown - Customer Success Associate
+p:luke_01 a foaf:Person ; foaf:name "Luke Brown" ;
+    org:hasMembership m:luke_01 .
+post:uk_012 a org:Post ;
+    skos:prefLabel "Customer Success Associate"@en-GB ;
+    org:role acmeUK:CustomerSuccessAssociate ;
+    org:postIn orgU:AcmeUK .
+m:luke_01 a org:Membership ;
+    org:member p:luke_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:CustomerSuccessAssociate ;
+    acme:viaPost post:uk_012 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2025-02-10"^^xsd:date ] ] .
+
+# Mia Russo - Operations Lead (ex-Sales) — HISTORICAL membership (closed interval)
+p:mia_01 a foaf:Person ; foaf:name "Mia Russo" ;
+    org:hasMembership m:mia_01_current , m:mia_01_past .
+post:uk_013 a org:Post ;
+    skos:prefLabel "Operations Lead, UK"@en-GB ;
+    org:role acmeUK:OperationsLead ;
+    org:postIn orgU:AcmeUK .
+m:mia_01_current a org:Membership ;
+    org:member p:mia_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:OperationsLead ;
+    acme:viaPost post:uk_013 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-04-01"^^xsd:date ] ] .
+m:mia_01_past a org:Membership ;
+    org:member p:mia_01 ;
+    org:organization orgU:AcmeUK ;
+    org:role acmeUK:AccountManager ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2021-05-15"^^xsd:date ] ;
+        time:hasEnd       [ time:inXSDDate "2024-03-31"^^xsd:date ] ] .
+
+# -----------------------------------------------------------------------------
+# AcmeDE people, posts, memberships (~13 employees)
+# -----------------------------------------------------------------------------
+
+p:noah_01 a foaf:Person ; foaf:name "Noah Becker" ;
+    org:hasMembership m:noah_01 .
+post:de_001 a org:Post ;
+    skos:prefLabel "Softwareentwickler II, Berlin Payments"@de ;
+    org:role acmeDE:SoftwareentwicklerII ;
+    org:postIn orgU:AcmeDE ;
+    org:reportsTo post:de_005 .
+m:noah_01 a org:Membership ;
+    org:member p:noah_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:SoftwareentwicklerII ;
+    acme:viaPost post:de_001 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-08-01"^^xsd:date ] ] .
+
+p:olga_01 a foaf:Person ; foaf:name "Olga Weber" ;
+    org:hasMembership m:olga_01 .
+post:de_002 a org:Post ;
+    skos:prefLabel "Softwareentwickler III, Berlin Payments"@de ;
+    org:role acmeDE:SoftwareentwicklerIII ;
+    org:postIn orgU:AcmeDE ;
+    org:reportsTo post:de_005 .
+m:olga_01 a org:Membership ;
+    org:member p:olga_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:SoftwareentwicklerIII ;
+    acme:viaPost post:de_002 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-02-13"^^xsd:date ] ] .
+
+p:peter_01 a foaf:Person ; foaf:name "Peter Müller" ;
+    org:hasMembership m:peter_01 .
+post:de_003 a org:Post ;
+    skos:prefLabel "Softwareentwickler IV, Berlin Payments"@de ;
+    org:role acmeDE:SoftwareentwicklerIV ;
+    org:postIn orgU:AcmeDE ;
+    org:reportsTo post:de_005 .
+m:peter_01 a org:Membership ;
+    org:member p:peter_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:SoftwareentwicklerIV ;
+    acme:viaPost post:de_003 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2020-06-01"^^xsd:date ] ] .
+
+p:quinn_01 a foaf:Person ; foaf:name "Quinn Schmidt" ;
+    org:hasMembership m:quinn_01 .
+post:de_004 a org:Post ;
+    skos:prefLabel "Dateningenieur, Berlin Data"@de ;
+    org:role acmeDE:DatenIngenieur ;
+    org:postIn orgU:AcmeDE ;
+    org:reportsTo post:de_005 .
+m:quinn_01 a org:Membership ;
+    org:member p:quinn_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:DatenIngenieur ;
+    acme:viaPost post:de_004 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-09-04"^^xsd:date ] ] .
+
+p:rolf_01 a foaf:Person ; foaf:name "Rolf Hoffmann" ;
+    org:hasMembership m:rolf_01 .
+post:de_005 a org:Post ;
+    skos:prefLabel "Teamleiter Entwicklung, Berlin"@de ;
+    org:role acmeDE:Teamleiter ;
+    org:postIn orgU:AcmeDE ;
+    org:reportsTo post:de_006 .
+m:rolf_01 a org:Membership ;
+    org:member p:rolf_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:Teamleiter ;
+    acme:viaPost post:de_005 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2019-10-01"^^xsd:date ] ] .
+
+p:sophia_01 a foaf:Person ; foaf:name "Sophia Klein" ;
+    org:hasMembership m:sophia_01 .
+post:de_006 a org:Post ;
+    skos:prefLabel "Entwicklungsleiter, DACH"@de ;
+    org:role acmeDE:Entwicklungsleiter ;
+    org:postIn orgU:AcmeDE .
+m:sophia_01 a org:Membership ;
+    org:member p:sophia_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:Entwicklungsleiter ;
+    acme:viaPost post:de_006 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2017-04-01"^^xsd:date ] ] .
+
+p:tobias_01 a foaf:Person ; foaf:name "Tobias Wagner" ;
+    org:hasMembership m:tobias_01 .
+post:de_007 a org:Post ;
+    skos:prefLabel "Data Scientist, Berlin"@de ;
+    org:role acmeDE:DataScientist ;
+    org:postIn orgU:AcmeDE .
+m:tobias_01 a org:Membership ;
+    org:member p:tobias_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:DataScientist ;
+    acme:viaPost post:de_007 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-02-15"^^xsd:date ] ] .
+
+p:ulrich_01 a foaf:Person ; foaf:name "Ulrich Fischer" ;
+    org:hasMembership m:ulrich_01 .
+post:de_008 a org:Post ;
+    skos:prefLabel "Produktmanager, Payments DACH"@de ;
+    org:role acmeDE:ProduktManager ;
+    org:postIn orgU:AcmeDE .
+m:ulrich_01 a org:Membership ;
+    org:member p:ulrich_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:ProduktManager ;
+    acme:viaPost post:de_008 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-12-01"^^xsd:date ] ] .
+
+p:vera_01 a foaf:Person ; foaf:name "Vera Schäfer" ;
+    org:hasMembership m:vera_01 .
+post:de_009 a org:Post ;
+    skos:prefLabel "Vertriebsmitarbeiter, DACH"@de ;
+    org:role acmeDE:Vertriebsmitarbeiter ;
+    org:postIn orgU:AcmeDE .
+m:vera_01 a org:Membership ;
+    org:member p:vera_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:Vertriebsmitarbeiter ;
+    acme:viaPost post:de_009 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-06-17"^^xsd:date ] ] .
+
+p:wolfgang_01 a foaf:Person ; foaf:name "Wolfgang Bauer" ;
+    org:hasMembership m:wolfgang_01 .
+post:de_010 a org:Post ;
+    skos:prefLabel "Vertriebsleiter DACH"@de ;
+    org:role acmeDE:Vertriebsleiter ;
+    org:postIn orgU:AcmeDE .
+m:wolfgang_01 a org:Membership ;
+    org:member p:wolfgang_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:Vertriebsleiter ;
+    acme:viaPost post:de_010 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2021-08-23"^^xsd:date ] ] .
+
+p:xander_01 a foaf:Person ; foaf:name "Xander Lehmann" ;
+    org:hasMembership m:xander_01 .
+post:de_011 a org:Post ;
+    skos:prefLabel "Marketing Manager DACH"@de ;
+    org:role acmeDE:MarketingManager ;
+    org:postIn orgU:AcmeDE .
+m:xander_01 a org:Membership ;
+    org:member p:xander_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:MarketingManager ;
+    acme:viaPost post:de_011 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-05-08"^^xsd:date ] ] .
+
+p:yvonne_01 a foaf:Person ; foaf:name "Yvonne Schulz" ;
+    org:hasMembership m:yvonne_01 .
+post:de_012 a org:Post ;
+    skos:prefLabel "Personalreferent, DACH"@de ;
+    org:role acmeDE:PersonalReferent ;
+    org:postIn orgU:AcmeDE .
+m:yvonne_01 a org:Membership ;
+    org:member p:yvonne_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:PersonalReferent ;
+    acme:viaPost post:de_012 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-03-15"^^xsd:date ] ] .
+
+p:zoe_01 a foaf:Person ; foaf:name "Zoe Krause" ;
+    org:hasMembership m:zoe_01 .
+post:de_013 a org:Post ;
+    skos:prefLabel "Kundenservicemitarbeiter, Berlin"@de ;
+    org:role acmeDE:KundenServiceMitarbeiter ;
+    org:postIn orgU:AcmeDE .
+m:zoe_01 a org:Membership ;
+    org:member p:zoe_01 ;
+    org:organization orgU:AcmeDE ;
+    org:role acmeDE:KundenServiceMitarbeiter ;
+    acme:viaPost post:de_013 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2025-01-13"^^xsd:date ] ] .
+
+# -----------------------------------------------------------------------------
+# AcmeUS people, posts, memberships (~14 employees)
+# -----------------------------------------------------------------------------
+
+p:aiden_01 a foaf:Person ; foaf:name "Aiden Garcia" ;
+    org:hasMembership m:aiden_01 .
+post:us_001 a org:Post ;
+    skos:prefLabel "Software Engineer II, SF Payments"@en-US ;
+    org:role acmeUS:SWE_II ;
+    org:postIn orgU:AcmeUS ;
+    org:reportsTo post:us_005 .
+m:aiden_01 a org:Membership ;
+    org:member p:aiden_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:SWE_II ;
+    acme:viaPost post:us_001 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2025-01-06"^^xsd:date ] ] .
+
+p:brianna_01 a foaf:Person ; foaf:name "Brianna Lee" ;
+    org:hasMembership m:brianna_01 .
+post:us_002 a org:Post ;
+    skos:prefLabel "Software Engineer III, SF Payments"@en-US ;
+    org:role acmeUS:SWE_III ;
+    org:postIn orgU:AcmeUS ;
+    org:reportsTo post:us_005 .
+m:brianna_01 a org:Membership ;
+    org:member p:brianna_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:SWE_III ;
+    acme:viaPost post:us_002 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-07-11"^^xsd:date ] ] .
+
+p:carlos_01 a foaf:Person ; foaf:name "Carlos Rivera" ;
+    org:hasMembership m:carlos_01 .
+post:us_003 a org:Post ;
+    skos:prefLabel "Staff Software Engineer, SF Payments"@en-US ;
+    org:role acmeUS:StaffSWE ;
+    org:postIn orgU:AcmeUS ;
+    org:reportsTo post:us_005 .
+m:carlos_01 a org:Membership ;
+    org:member p:carlos_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:StaffSWE ;
+    acme:viaPost post:us_003 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2020-10-19"^^xsd:date ] ] .
+
+p:dana_01 a foaf:Person ; foaf:name "Dana Park" ;
+    org:hasMembership m:dana_01 .
+post:us_004 a org:Post ;
+    skos:prefLabel "Principal Software Engineer, SF Platform"@en-US ;
+    org:role acmeUS:PrincipalSWE ;
+    org:postIn orgU:AcmeUS .
+m:dana_01 a org:Membership ;
+    org:member p:dana_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:PrincipalSWE ;
+    acme:viaPost post:us_004 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2018-08-06"^^xsd:date ] ] .
+
+# Eve Martinez had a Post but the Post is currently OPEN (no current membership)
+# Used to test "open postings" queries.
+p:eve_05 a foaf:Person ; foaf:name "Eve Martinez" .  # left the company
+post:us_005 a org:Post ;
+    skos:prefLabel "Engineering Manager, SF Payments"@en-US ;
+    org:role acmeUS:EM ;
+    org:postIn orgU:AcmeUS ;
+    org:reportsTo post:us_006 .
+# Closed historical membership only:
+m:eve_05_past a org:Membership ;
+    org:member p:eve_05 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:EM ;
+    acme:viaPost post:us_005 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2021-03-01"^^xsd:date ] ;
+        time:hasEnd       [ time:inXSDDate "2026-04-30"^^xsd:date ] ] .
+
+p:felix_01 a foaf:Person ; foaf:name "Felix Anderson" ;
+    org:hasMembership m:felix_01 .
+post:us_006 a org:Post ;
+    skos:prefLabel "Director of Engineering, US Payments"@en-US ;
+    org:role acmeUS:DirectorOfEngineering ;
+    org:postIn orgU:AcmeUS .
+m:felix_01 a org:Membership ;
+    org:member p:felix_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:DirectorOfEngineering ;
+    acme:viaPost post:us_006 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2019-06-17"^^xsd:date ] ] .
+
+p:gina_01 a foaf:Person ; foaf:name "Gina Chen" ;
+    org:hasMembership m:gina_01 .
+post:us_007 a org:Post ;
+    skos:prefLabel "Data Engineer, SF Data Platform"@en-US ;
+    org:role acmeUS:DataEngineer ;
+    org:postIn orgU:AcmeUS .
+m:gina_01 a org:Membership ;
+    org:member p:gina_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:DataEngineer ;
+    acme:viaPost post:us_007 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2023-04-24"^^xsd:date ] ] .
+
+p:harris_01 a foaf:Person ; foaf:name "Harris Patel" ;
+    org:hasMembership m:harris_01 .
+post:us_008 a org:Post ;
+    skos:prefLabel "Data Scientist, SF Data Science"@en-US ;
+    org:role acmeUS:DataScientist ;
+    org:postIn orgU:AcmeUS .
+m:harris_01 a org:Membership ;
+    org:member p:harris_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:DataScientist ;
+    acme:viaPost post:us_008 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-09-09"^^xsd:date ] ] .
+
+p:isla_01 a foaf:Person ; foaf:name "Isla O'Connor" ;
+    org:hasMembership m:isla_01 .
+post:us_009 a org:Post ;
+    skos:prefLabel "Senior PM, SF Payments"@en-US ;
+    org:role acmeUS:SeniorPM ;
+    org:postIn orgU:AcmeUS .
+m:isla_01 a org:Membership ;
+    org:member p:isla_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:SeniorPM ;
+    acme:viaPost post:us_009 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-11-28"^^xsd:date ] ] .
+
+p:jamal_01 a foaf:Person ; foaf:name "Jamal Williams" ;
+    org:hasMembership m:jamal_01 .
+post:us_010 a org:Post ;
+    skos:prefLabel "Account Executive, West"@en-US ;
+    org:role acmeUS:AE ;
+    org:postIn orgU:AcmeUS .
+m:jamal_01 a org:Membership ;
+    org:member p:jamal_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:AE ;
+    acme:viaPost post:us_010 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2025-03-31"^^xsd:date ] ] .
+
+p:kira_01 a foaf:Person ; foaf:name "Kira Rodriguez" ;
+    org:hasMembership m:kira_01 .
+post:us_011 a org:Post ;
+    skos:prefLabel "Regional Sales Manager, West"@en-US ;
+    org:role acmeUS:RegionalSalesManager ;
+    org:postIn orgU:AcmeUS .
+m:kira_01 a org:Membership ;
+    org:member p:kira_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:RegionalSalesManager ;
+    acme:viaPost post:us_011 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2021-09-14"^^xsd:date ] ] .
+
+p:liam_01 a foaf:Person ; foaf:name "Liam Foster" ;
+    org:hasMembership m:liam_01 .
+post:us_012 a org:Post ;
+    skos:prefLabel "Area VP of Sales, North America"@en-US ;
+    org:role acmeUS:AreaVPOfSales ;
+    org:postIn orgU:AcmeUS .
+m:liam_01 a org:Membership ;
+    org:member p:liam_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:AreaVPOfSales ;
+    acme:viaPost post:us_012 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2019-02-04"^^xsd:date ] ] .
+
+p:mei_01 a foaf:Person ; foaf:name "Mei Zhang" ;
+    org:hasMembership m:mei_01 .
+post:us_013 a org:Post ;
+    skos:prefLabel "HR Business Partner, US Engineering"@en-US ;
+    org:role acmeUS:HRBP ;
+    org:postIn orgU:AcmeUS .
+m:mei_01 a org:Membership ;
+    org:member p:mei_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:HRBP ;
+    acme:viaPost post:us_013 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2022-05-30"^^xsd:date ] ] .
+
+p:nate_01 a foaf:Person ; foaf:name "Nate Johnson" ;
+    org:hasMembership m:nate_01 .
+post:us_014 a org:Post ;
+    skos:prefLabel "Technical Recruiter, US"@en-US ;
+    org:role acmeUS:TechnicalRecruiter ;
+    org:postIn orgU:AcmeUS .
+m:nate_01 a org:Membership ;
+    org:member p:nate_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:TechnicalRecruiter ;
+    acme:viaPost post:us_014 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-07-22"^^xsd:date ] ] .
+
+p:oscar_01 a foaf:Person ; foaf:name "Oscar Davis" ;
+    org:hasMembership m:oscar_01 .
+post:us_015 a org:Post ;
+    skos:prefLabel "Customer Support Specialist, US"@en-US ;
+    org:role acmeUS:CustomerSupportSpecialist ;
+    org:postIn orgU:AcmeUS .
+m:oscar_01 a org:Membership ;
+    org:member p:oscar_01 ;
+    org:organization orgU:AcmeUS ;
+    org:role acmeUS:CustomerSupportSpecialist ;
+    acme:viaPost post:us_015 ;
+    org:memberDuring [ a time:Interval ;
+        time:hasBeginning [ time:inXSDDate "2024-11-11"^^xsd:date ] ] .

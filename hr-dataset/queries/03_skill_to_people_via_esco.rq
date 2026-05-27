@@ -1,0 +1,51 @@
+# Q3: ESCO traversal
+#
+# For a given ESCO occupation or ISCO unit group, find every local role across
+# AcmeCorp that connects to it, plus the people currently in those roles.
+#
+# Demonstrates that the dataset participates in the wider ESCO/ISCO ecosystem.
+# If you also load the official ESCO RDF dump, the ESCO concepts will resolve
+# with their full multilingual labels.
+
+PREFIX rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX skos:     <http://www.w3.org/2004/02/skos/core#>
+PREFIX org:      <http://www.w3.org/ns/org#>
+PREFIX foaf:     <http://xmlns.com/foaf/0.1/>
+PREFIX time:     <http://www.w3.org/2006/time#>
+PREFIX acme:     <https://acme.example/ontology/>
+PREFIX escoIsco: <http://data.europa.eu/esco/isco/>
+PREFIX escoOcc:  <http://data.europa.eu/esco/occupation/>
+
+# Find everyone in AcmeCorp whose local role connects (via global) to ISCO 2512
+# (Software developers). This uses property paths that traverse:
+#   local --(close/exact)--> global --(broad/close/exact)--> ESCO
+#
+SELECT ?personName ?subsidiaryLabel ?localLabel ?globalLabel
+WHERE {
+  BIND( escoIsco:C2512 AS ?targetEsco )
+
+  # Global -> ESCO concept (broadMatch or closeMatch)
+  ?globalRole skos:broadMatch|skos:closeMatch|skos:exactMatch ?targetEsco ;
+              skos:prefLabel ?globalLabel .
+
+  # Local -> Global
+  ?localRole skos:closeMatch|skos:exactMatch ?globalRole ;
+             skos:prefLabel ?localLabel .
+
+  # Membership uses the local role
+  ?membership a org:Membership ;
+              org:role ?localRole ;
+              org:member ?person ;
+              org:organization ?subsidiary ;
+              org:memberDuring ?interval .
+
+  FILTER NOT EXISTS { ?interval time:hasEnd ?e . }
+
+  ?person foaf:name ?personName .
+  ?subsidiary skos:prefLabel ?subsidiaryLabel .
+
+  FILTER (LCASE(lang(?subsidiaryLabel)) IN ("en", "en-gb", "en-us"))
+  FILTER (LCASE(lang(?localLabel))      IN ("en", "en-gb", "en-us", "de"))
+  FILTER (lang(?globalLabel)     = "en")
+}
+ORDER BY ?subsidiaryLabel ?personName

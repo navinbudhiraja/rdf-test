@@ -1,0 +1,206 @@
+# =============================================================================
+# AcmeCorp Global Role Catalog
+#
+# These are the harmonized, canonical roles used across the whole company.
+# Each subsidiary's local titles get mapped (in 06_mappings.ttl) to one of
+# these. These in turn anchor to ESCO occupations (in 07_esco_anchors.ttl).
+# =============================================================================
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix org:    <http://www.w3.org/ns/org#> .
+@prefix dcterms:<http://purl.org/dc/terms/> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix acme:   <https://acme.example/ontology/> .
+@prefix acmeG:  <https://acme.example/global/role/> .
+
+acme:GlobalRoleScheme a skos:ConceptScheme ;
+    skos:prefLabel "AcmeCorp Global Role Catalog"@en ;
+    dcterms:description
+      "Canonical, language-neutral role definitions for AcmeCorp. Subsidiary "
+      "vocabularies map to this scheme via skos:closeMatch / broadMatch / "
+      "narrowMatch."@en ;
+    dcterms:issued "2026-05-25"^^xsd:date .
+
+# -----------------------------------------------------------------------------
+# Engineering family
+# -----------------------------------------------------------------------------
+
+acmeG:SoftwareEngineerL3 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Software Engineer, Level 3"@en ;
+    skos:definition
+      "Mid-level individual contributor delivering software features under "
+      "guidance. ~2-4 years experience."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L3 .
+
+acmeG:SoftwareEngineerL4 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Software Engineer, Level 4 (Senior)"@en ;
+    skos:definition
+      "Senior individual contributor responsible for substantial features and "
+      "mentoring. ~4-7 years experience."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L4 ;
+    skos:broader acmeG:SoftwareEngineerL3 .
+
+acmeG:SoftwareEngineerL5 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Software Engineer, Level 5 (Staff)"@en ;
+    skos:definition
+      "Staff-level engineer responsible for end-to-end design and delivery of "
+      "software systems. ~7-10 years experience."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L5 ;
+    skos:broader acmeG:SoftwareEngineerL4 .
+
+acmeG:EngineeringManagerL6 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Engineering Manager, Level 6"@en ;
+    skos:definition
+      "First-line engineering manager. Owns delivery for one team of 4-10 ICs."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L6 .
+
+acmeG:EngineeringDirectorL7 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Engineering Director, Level 7"@en ;
+    skos:definition
+      "Manager of managers; owns multiple teams or a sub-organization."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L7 ;
+    skos:broader acmeG:EngineeringManagerL6 .
+
+acmeG:DataEngineerL4 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Data Engineer, Level 4"@en ;
+    skos:definition
+      "Senior data engineer building data pipelines and warehouse systems."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L4 .
+
+acmeG:DataScientistL4 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Data Scientist, Level 4"@en ;
+    skos:definition "Senior data scientist; statistical modeling and ML."@en ;
+    acme:hasJobFamily acme:Family_Engineering ;
+    acme:hasSeniorityLevel acme:L4 .
+
+# -----------------------------------------------------------------------------
+# Product family
+# -----------------------------------------------------------------------------
+
+acmeG:ProductManagerL4 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Product Manager, Level 4"@en ;
+    skos:definition "Owns the roadmap for one product area."@en ;
+    acme:hasJobFamily acme:Family_Product ;
+    acme:hasSeniorityLevel acme:L4 .
+
+acmeG:SeniorProductManagerL5 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Senior Product Manager, Level 5"@en ;
+    acme:hasJobFamily acme:Family_Product ;
+    acme:hasSeniorityLevel acme:L5 ;
+    skos:broader acmeG:ProductManagerL4 .
+
+# -----------------------------------------------------------------------------
+# Sales family
+# -----------------------------------------------------------------------------
+
+acmeG:AccountExecutiveL3 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Account Executive, Level 3"@en ;
+    skos:definition "Owns a book of business and closes new deals."@en ;
+    acme:hasJobFamily acme:Family_Sales ;
+    acme:hasSeniorityLevel acme:L3 .
+
+acmeG:SalesManagerL6 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Sales Manager, Level 6"@en ;
+    skos:definition "Manages a regional sales team."@en ;
+    acme:hasJobFamily acme:Family_Sales ;
+    acme:hasSeniorityLevel acme:L6 .
+
+acmeG:VPSalesL8 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "VP of Sales, Level 8"@en ;
+    acme:hasJobFamily acme:Family_Sales ;
+    acme:hasSeniorityLevel acme:L8 ;
+    skos:broader acmeG:SalesManagerL6 .
+
+# -----------------------------------------------------------------------------
+# Marketing family
+# -----------------------------------------------------------------------------
+
+acmeG:MarketingManagerL5 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Marketing Manager, Level 5"@en ;
+    skos:definition "Owns campaigns and demand generation for a region/segment."@en ;
+    acme:hasJobFamily acme:Family_Marketing ;
+    acme:hasSeniorityLevel acme:L5 .
+
+acmeG:MarketingDirectorL7 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Marketing Director, Level 7"@en ;
+    acme:hasJobFamily acme:Family_Marketing ;
+    acme:hasSeniorityLevel acme:L7 ;
+    skos:broader acmeG:MarketingManagerL5 .
+
+# -----------------------------------------------------------------------------
+# Finance family
+# -----------------------------------------------------------------------------
+
+acmeG:FinancialAnalystL3 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Financial Analyst, Level 3"@en ;
+    acme:hasJobFamily acme:Family_Finance ;
+    acme:hasSeniorityLevel acme:L3 .
+
+acmeG:FinanceManagerL6 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Finance Manager, Level 6"@en ;
+    acme:hasJobFamily acme:Family_Finance ;
+    acme:hasSeniorityLevel acme:L6 .
+
+# -----------------------------------------------------------------------------
+# People / HR family
+# -----------------------------------------------------------------------------
+
+acmeG:HRBusinessPartnerL5 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "HR Business Partner, Level 5"@en ;
+    skos:definition "Embedded HR support for a business unit."@en ;
+    acme:hasJobFamily acme:Family_People ;
+    acme:hasSeniorityLevel acme:L5 .
+
+acmeG:RecruiterL3 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Recruiter, Level 3"@en ;
+    acme:hasJobFamily acme:Family_People ;
+    acme:hasSeniorityLevel acme:L3 .
+
+# -----------------------------------------------------------------------------
+# Operations & Customer Support
+# -----------------------------------------------------------------------------
+
+acmeG:OperationsManagerL6 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Operations Manager, Level 6"@en ;
+    acme:hasJobFamily acme:Family_Operations ;
+    acme:hasSeniorityLevel acme:L6 .
+
+acmeG:CustomerSupportRepL2 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Customer Support Representative, Level 2"@en ;
+    acme:hasJobFamily acme:Family_CustomerSupport ;
+    acme:hasSeniorityLevel acme:L2 .
+
+acmeG:CustomerSupportLeadL5 a acme:GlobalRole ;
+    skos:inScheme acme:GlobalRoleScheme ;
+    skos:prefLabel "Customer Support Lead, Level 5"@en ;
+    acme:hasJobFamily acme:Family_CustomerSupport ;
+    acme:hasSeniorityLevel acme:L5 ;
+    skos:broader acmeG:CustomerSupportRepL2 .
