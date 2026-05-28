@@ -1,12 +1,17 @@
-# NL → SPARQL + SQL Engine (Ontop VKG)
+# NL → SPARQL (+ SQL) Engine (Ontop VKG)
 
-A CLI tool that takes a natural language question, generates both a SPARQL query and a SQL query using Claude, executes them against the university dataset, and displays the results as side-by-side tables.
+A CLI tool that takes a natural language question and generates a SPARQL query (and, where applicable, a SQL query) using Claude, executes them against an Ontop VKG endpoint, and displays the results. Two datasets are supported:
+
+- **university** — dual SPARQL + SQL, displayed side-by-side (Ontop on :8080 + in-memory DuckDB).
+- **hr** — the AcmeCorp multi-subsidiary HR knowledge graph, SPARQL-only (Ontop on :8081). See [`hr-dataset/README.md`](hr-dataset/README.md) for the data model.
 
 ```
-User: "Which professors teach more than one course?"
-         │
-         ├──► Claude API ──► SPARQL ──► Ontop VKG endpoint ──► DuckDB ──► table
-         └──► Claude API ──► SQL    ──► DuckDB (direct)           ──► table
+University:  "Which professors teach more than one course?"
+                ├──► Claude ──► SPARQL ──► Ontop :8080 ──► DuckDB ──► table
+                └──► Claude ──► SQL    ──► DuckDB (direct)        ──► table
+
+HR:          "Show the reporting chain for Alice Chen"
+                └──► Claude ──► SPARQL ──► Ontop :8081 ──► DuckDB ──► table
 ```
 
 ## Prerequisites
@@ -21,7 +26,7 @@ User: "Which professors teach more than one course?"
 # 1. Clone / enter the project
 cd rdf-test
 
-# 2. Run setup (downloads Ontop CLI, DuckDB JDBC driver, creates university.ddb)
+# 2. Run setup (downloads Ontop CLI + DuckDB JDBC driver, builds university.ddb and hr.ddb)
 ./setup.sh
 
 # 3. Install Python dependencies
@@ -38,26 +43,27 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## Running
 
-### Step 1 — Start the Ontop SPARQL endpoint (keep this terminal open)
+### Step 1 — Start the Ontop SPARQL endpoint(s) (keep each terminal open)
 
 ```bash
-./ontop-cli/ontop endpoint \
-    -m ontop/university.obda \
-    -t ontop/university.ttl \
-    -p ontop/database.properties \
-    --cors-allowed-origins='*'
+./start_ontop.sh university   # http://localhost:8080/  (SPARQL browser UI)
+./start_ontop.sh hr           # http://localhost:8081/  (run in a separate terminal)
 ```
 
-The SPARQL browser UI is at http://localhost:8080/
+The two endpoints are independent; start whichever you need (or both in parallel). `start_ontop.sh` exports the heap settings Ontop needs to avoid OOM on the HR rewriter — prefer it over invoking the Ontop CLI directly.
 
 ### Step 2 — Ask questions (in a separate terminal)
 
 ```bash
+# University (dual SPARQL + SQL)
 python src/nl_query.py "List all students"
 python src/nl_query.py "Which full professors teach more than one course?"
-python src/nl_query.py "Who is enrolled in Database Systems?"
 python src/nl_query.py "How many students are enrolled in each course?"
-python src/nl_query.py "Which students share a course with a PostDoc?"
+
+# HR (SPARQL-only) — pass --dataset hr, or use the wrapper
+python src/nl_query.py --dataset hr "Which employees are software engineers across all subsidiaries?"
+./query_hr.sh "Show the reporting chain for Alice Chen"
+./query_hr.sh "Which role mappings need review?"
 ```
 
 ## Slack Bot
@@ -86,9 +92,9 @@ SLACK_BOT_TOKEN=xoxb-...
 SLACK_APP_TOKEN=xapp-...
 ```
 
-Start Ontop (required for SPARQL results — SQL works without it):
+Start Ontop (required for SPARQL results — SQL works without it). The Slack bot is **university-only**, so only the university endpoint is needed:
 ```bash
-./start_ontop.sh
+./start_ontop.sh university
 ```
 
 Start the bot:
@@ -104,9 +110,11 @@ The bot is online as long as this process is running. In Slack:
 
 ---
 
-## Dataset
+## Datasets
 
-The **university dataset** (from the [Ontop VKG tutorial](https://ontop-vkg.org/tutorial/)) contains:
+### University
+
+From the [Ontop VKG tutorial](https://ontop-vkg.org/tutorial/):
 
 | Table | Description |
 |---|---|
@@ -116,24 +124,36 @@ The **university dataset** (from the [Ontop VKG tutorial](https://ontop-vkg.org/
 | `teaching` | Which academic teaches which course |
 | `course_registration` | Which student is enrolled in which course |
 
+### AcmeCorp HR
+
+A synthetic multinational HR knowledge graph with three subsidiaries (AcmeUK, AcmeDE, AcmeUS). Each subsidiary uses its own local job-title vocabulary; all local roles map via SKOS (`closeMatch`/`broadMatch`) to a single global role catalog, which is anchored to real ESCO/ISCO occupations.
+
+~41 people, ~21 global roles, ~48 local roles, ~47 SKOS mappings, ~24 ESCO anchors across 4 organizations. Designed to demonstrate cross-subsidiary role reconciliation, ESCO/skill traversal, reporting lines, and mapping-quality queries.
+
+The Turtle is the source of truth — `hr-dataset/build_relational.py` converts the 9 `.ttl` files into `data/hr.sql`, and `ontop/hr.obda` rebuilds the same RDF graph from those tables. See [`hr-dataset/README.md`](hr-dataset/README.md) for the full data dictionary.
+
 ## Architecture
 
 | Component | Role |
 |---|---|
-| `src/nl_translator.py` | Calls Claude API (parallel threads) to generate SPARQL + SQL from NL |
-| `src/sparql_executor.py` | HTTP POST to Ontop SPARQL endpoint, parses JSON results |
-| `src/sql_executor.py` | In-memory DuckDB loaded from `data/university.sql`, executes SQL directly |
-| `src/nl_query.py` | CLI entry point, orchestrates translation + execution + display |
-| `src/mcp_server.py` | MCP server exposing `ask_university`, `run_sql`, `get_schema` tools to Claude Desktop |
-| `src/slack_bot.py` | Slack bot (Socket Mode) — DMs and @mentions trigger the full NL→SPARQL+SQL pipeline |
-| `ontop/university.obda` | OBDA mappings: SQL → RDF triples |
-| `ontop/university.ttl` | OWL 2 QL ontology (classes + properties) |
-| `data/university.sql` | Source data (CREATE TABLE + INSERT) |
+| `src/nl_translator.py` | Calls Claude API (parallel threads, prompt caching) to generate SPARQL + SQL from NL — dataset-aware |
+| `src/datasets.py` | Registry of datasets → label, supported languages, SPARQL endpoint, SQL source |
+| `src/sparql_executor.py` | HTTP POST to an Ontop SPARQL endpoint, parses JSON results |
+| `src/sql_executor.py` | In-memory DuckDB loaded from `data/university.sql`, executes SQL directly (university only) |
+| `src/nl_query.py` | CLI entry point; `--dataset {university,hr}` flag |
+| `src/mcp_server.py` | MCP server. University tools: `ask_university`, `run_sql`, `get_schema`. HR tools: `ask_hr`, `run_sparql_hr`, `get_hr_schema` |
+| `src/slack_bot.py` | Slack bot (Socket Mode) — DMs and @mentions trigger the university NL→SPARQL+SQL pipeline |
+| `ontop/university.obda` / `.ttl` | University OBDA mappings + OWL 2 QL ontology |
+| `ontop/hr.obda` / `hr.ttl` | HR OBDA mappings + custom TBox (built on `org:`, `foaf:`, `skos:`, `prov:`, `time:`) |
+| `data/university.sql` / `data/hr.sql` | Source data per dataset (`hr.sql` is generated from `hr-dataset/*.ttl`) |
+| `hr-dataset/` | Source HR Turtle files, gold queries, and tests |
+| `start_ontop.sh` | `./start_ontop.sh [university\|hr]` — starts the chosen endpoint on :8080 / :8081 |
+| `query.sh` / `query_hr.sh` | Thin CLI wrappers for the two datasets |
 
 ## How it works
 
-1. **Ontop VKG** sits on top of the DuckDB file and exposes it as a SPARQL endpoint. When you send a SPARQL query, Ontop rewrites it to SQL using the OBDA mapping rules and executes it against DuckDB transparently.
+1. **Ontop VKG** sits on top of the DuckDB files and exposes each as a SPARQL endpoint. When you send a SPARQL query, Ontop rewrites it to SQL using the OBDA mapping rules and executes it against DuckDB transparently.
 
-2. **Claude API** receives the natural language question with the full ontology/schema as cached context and returns a query in the target language. Both translations run concurrently.
+2. **Claude API** receives the natural language question with the full ontology/schema as cached context and returns a query in the target language. For the university dataset, SPARQL and SQL translations run concurrently.
 
-3. **Results** are displayed side by side so you can compare the SPARQL and SQL outputs for the same question.
+3. **Results**: for university, SPARQL and SQL outputs are displayed side by side so you can compare them. For HR, only SPARQL is generated and a single results table is shown.
