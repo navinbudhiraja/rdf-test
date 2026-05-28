@@ -50,8 +50,13 @@ Ontop at localhost:8080    In-memory DuckDB
 | `hr-dataset/` | The source HR dataset (9 Turtle files), example queries, and tests — see "Second Dataset" |
 | `hr-dataset/build_relational.py` | One-off: loads the HR Turtle via rdflib and writes `data/hr.sql` (DDL + INSERTs). Source of truth = the Turtle |
 | `hr-dataset/tests/verify_ontop.py` | Round-trip test: runs every `queries/*.rq` against the rdflib oracle AND the HR Ontop endpoint and asserts equality |
+| `hr-dataset/tests/test_nl_translation.py` | End-to-end test of the HR SPARQL **prompt**: NL question → `translate()` → Ontop, asserts results. Run after editing `_HR_SPARQL_SYSTEM` |
+| `hr-dataset/tests/load_and_query.py` | Oracle self-test: loads the Turtle in rdflib, runs `queries/*.rq` against `expected_results.md`, and runs SHACL shapes. No Ontop needed |
+| `doc/architecture.md` | Mermaid system diagrams (entry points, engine, data layer, Slack/MCP integration) |
+| `doc/hr_sparql_prompt_design.md` | Design notes for `_HR_SPARQL_SYSTEM`: what was pulled from TBox / OBDA / gold queries, and which Ontop 5.5.0 constraints shaped it |
 | `setup.sh` | One-time setup: downloads Ontop v5.5.0 CLI + DuckDB JDBC; builds `university.ddb` and `hr.ddb` |
-| `start_ontop.sh` | `./start_ontop.sh [university\|hr]` — starts the chosen Ontop endpoint (university :8080, hr :8081) |
+| `start_ontop.sh` | `./start_ontop.sh [university\|hr]` — starts the chosen Ontop endpoint (university :8080, hr :8081). Scopes its `pkill` to the dataset's OBDA filename so the two endpoints coexist |
+| `query.sh` / `query_hr.sh` | Thin wrappers around `python src/nl_query.py [--dataset hr] "…"` |
 
 ---
 
@@ -108,15 +113,65 @@ which is awkward in hand-written SQL, so the HR pipeline generates only SPARQL.
 IRIs (e.g. `acmeG:SoftwareEngineerL4`, `acmeUK:SeniorSoftwareEngineer`, `p:alice_01`).
 n-ary `org:Membership` intervals are rebuilt as minted `interval`/`instant` IRIs.
 
+### RDF Ontology (`ontop/hr.ttl`)
+
+The HR TBox is deliberately small — it only declares AcmeCorp's **custom**
+classes and properties. The bulk of the HR vocabulary comes from standard
+ontologies (`org:`, `foaf:`, `skos:`, `prov:`, `time:`) that aren't redeclared
+here; they appear directly in the OBDA mapping targets.
+
+- Custom classes (all in `acme:`): `Subsidiary` (⊑ `org:FormalOrganization`),
+  `GlobalRole` and `LocalRole` (both ⊑ `org:Role`, `skos:Concept`), `JobFamily`
+  (⊑ `skos:Concept`), `SeniorityLevel`, `MappingActivity` (⊑ `prov:Activity`).
+- Custom properties: `acme:scopedTo` (LocalRole → Subsidiary),
+  `acme:hasJobFamily`, `acme:hasSeniorityLevel`, `acme:viaPost`
+  (Membership → Post); datatypes `acme:levelOrdinal`, `acme:confidence`,
+  `acme:mappingMethod`, `acme:reviewStatus`.
+- Standard-vocab classes used in queries but **not** in `hr.ttl` (they live in
+  `hr.obda` targets, so the prompt has to know them explicitly):
+  `org:Post`, `org:Membership`, `foaf:Person`, `skos:Concept`,
+  `prov:Activity`, `time:Interval`, `time:Instant`.
+- IRI prefixes (from `hr.obda`):
+  `acme:` (vocabulary), `acmeG:` (global roles), `acmeUK:` / `acmeDE:` / `acmeUS:`
+  (per-subsidiary local roles), `p:` (persons), `post:` (posts).
+- IRI patterns reconstructed by the OBDA: `acmeG:{code}`, `acmeUK:{code}` /
+  `acmeDE:{code}` / `acmeUS:{code}`, `p:{person_code}`, `post:{post_code}`;
+  membership intervals are minted as `acme:interval/{id}` / `acme:instant/{id}`.
+
+### What's in the data
+
+- ~41 people, ~41 posts, ~21 global roles, ~48 local roles (split across the 3
+  subsidiaries), ~47 SKOS mappings, ~24 ESCO anchors, 4 organizations.
+- Title styles per subsidiary: AcmeUK uses "Senior X / Lead Y / Head of Z"
+  (`@en-GB`); AcmeDE uses German titles with II/III/IV seniority suffixes
+  (`@de`, plus `@en` on org labels); AcmeUS uses LX ladder levels + "VP /
+  Director" (`@en-US`). Global roles are `@en`.
+- Designed to answer: cross-subsidiary role equivalence, ESCO/skill traversal,
+  reporting lines via `post → reportsTo`, mappings needing review (low
+  confidence or missing approval), open postings (Post with no current
+  Membership), unmapped local roles, people-by-seniority/job-family.
+- Deliberate "gotchas" (so review/exception queries return non-empty results):
+  one AcmeDE role is intentionally unmapped; two mappings have
+  `acme:confidence < 0.7`; one person holds an open Post with no Membership.
+  See `hr-dataset/README.md` for the full list.
+
 ### Verification (round-trip correctness)
 
-`hr-dataset/tests/verify_ontop.py` is **data-driven**: it globs `hr-dataset/queries/*.rq`,
-runs each against the **rdflib oracle** (original Turtle) and the **HR Ontop endpoint**
-(:8081), and asserts the result sets match (numeric/datetime canonicalized,
-order-independent). Adding a test later = drop a new `NN_name.rq` into
-`hr-dataset/queries/` — it's picked up automatically; the oracle computes the expected
-answer. (`hr-dataset/tests/load_and_query.py` separately validates the oracle itself
-against `expected_results.md` via rdflib, and runs the SHACL shapes.)
+Three layers of tests, in order of what they catch:
+
+- `hr-dataset/tests/load_and_query.py` — validates the **oracle**. Loads the
+  Turtle into rdflib, runs `queries/*.rq` against `expected_results.md`, and
+  runs the SHACL shapes. No Ontop needed.
+- `hr-dataset/tests/verify_ontop.py` — validates the **Ontop mappings**. Globs
+  `hr-dataset/queries/*.rq`, runs each against both the rdflib oracle and the
+  HR Ontop endpoint (:8081), and asserts the result sets match
+  (numeric/datetime canonicalized, order-independent). Data-driven: drop a new
+  `NN_name.rq` into `hr-dataset/queries/` and it's picked up automatically.
+- `hr-dataset/tests/test_nl_translation.py` — validates the **HR SPARQL
+  prompt**. Sends NL questions through `translate()` to Ontop and asserts the
+  results. Run this after editing `_HR_SPARQL_SYSTEM` in `nl_translator.py`;
+  the `verify_ontop` tests above don't cover prompt regressions because they
+  only test hand-written queries.
 
 ---
 
@@ -140,17 +195,23 @@ bash setup.sh
 pip install -r requirements.txt
 ```
 
-### Start Ontop SPARQL endpoint (required for SPARQL queries)
+### Start Ontop SPARQL endpoint(s) (required for SPARQL queries)
 ```bash
-bash start_ontop.sh
-# Runs on http://localhost:8080/ — keep terminal open
+./start_ontop.sh university   # http://localhost:8080/  — keep terminal open
+./start_ontop.sh hr           # http://localhost:8081/  — separate terminal
 ```
+The two are independent (different ports, different `.ddb` files); run both in
+parallel to query both datasets concurrently.
 
 ### CLI query
 ```bash
+# University (dual SPARQL + SQL, side-by-side)
 python src/nl_query.py "Which professors teach more than one course?"
-# Or via wrapper:
 bash query.sh "Which students are enrolled in AI?"
+
+# HR (SPARQL-only)
+python src/nl_query.py --dataset hr "Which employees are software engineers across all subsidiaries?"
+bash query_hr.sh "Show the reporting chain for Alice Chen"
 ```
 
 ### MCP server
@@ -181,8 +242,47 @@ System prompts are embedded directly in `src/nl_translator.py` (not loaded from 
 
 ## Development Notes
 
-- **No automated tests** — all testing is manual via CLI or MCP tool invocation
-- **In-memory DuckDB** in `sql_executor.py` is intentional: avoids file-lock conflicts when Ontop's JDBC process holds `university.ddb` open
-- If Ontop is not running, SPARQL queries fail with a helpful error; SQL still works
-- `university.ddb` is the binary DuckDB file used by Ontop; `data/university.sql` is the source of truth for the schema and seed data
-- Slack bot uses Socket Mode — no public URL or port forwarding needed; requires `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in `.env`
+### Testing
+- Automated tests live in `hr-dataset/tests/` — see "Verification" above for the
+  three-layer breakdown (oracle / Ontop / NL-prompt). The university side has
+  no automated tests; all testing there is manual via CLI or MCP.
+
+### Ontop runtime
+- **Heap**: the default 512 MB OOMs on the HR rewriter. `start_ontop.sh`
+  exports `ONTOP_JAVA_ARGS="-Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"` —
+  don't strip it.
+- **Ontop 5.5.0 SPARQL quirks** that shaped the HR prompt and OBDA:
+  - `lang()` returns lowercased tags. Filter on `"en-gb" / "de" / "en-us" / "en"`,
+    not `"en-GB"`.
+  - No arbitrary property paths in OBDA mapping targets.
+  - No meta-mappings (a mapping target can't reference another mapping).
+- **Dual endpoints coexist**: `start_ontop.sh` scopes its `pkill` to the
+  dataset's OBDA filename, so `start_ontop.sh hr` won't kill an existing
+  university endpoint (and vice versa). Don't "simplify" the pkill — DuckDB
+  takes an exclusive lock per `.ddb`, but the two datasets have separate files.
+- If Ontop is not running, SPARQL queries fail with a helpful error; university
+  SQL still works (it goes through in-memory DuckDB, not Ontop).
+
+### Data files
+- `university.ddb` and `hr.ddb` (repo root) are the binary DuckDB files Ontop
+  reads. Both are regenerated by `setup.sh`.
+- `data/university.sql` is the source of truth for the university schema/seed.
+- `data/hr.sql` is **generated** from the 9 Turtle files in `hr-dataset/` by
+  `hr-dataset/build_relational.py` — edit the Turtle, not `hr.sql`.
+- **In-memory DuckDB** in `sql_executor.py` is intentional: avoids file-lock
+  conflicts when Ontop's JDBC process holds `university.ddb` open.
+
+### Iterating on prompts
+- SPARQL/SQL system prompts are embedded directly in `src/nl_translator.py`
+  (not loaded from files) — edit them there.
+- HR prompt workflow:
+  1. `./start_ontop.sh hr` (in another terminal; endpoint on :8081)
+  2. Edit `_HR_SPARQL_SYSTEM` in `src/nl_translator.py`
+  3. `python hr-dataset/tests/test_nl_translation.py`
+- See `doc/hr_sparql_prompt_design.md` for what each section of the prompt
+  contributes and which Ontop/gold-query constraints shaped it.
+
+### Slack
+- Slack bot uses Socket Mode (no public URL or port forwarding); university
+  pipeline only; requires `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in `.env`.
+  See `README.md` for the one-time Slack App setup.
