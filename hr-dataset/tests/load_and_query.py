@@ -90,6 +90,30 @@ EXPECTED = {
         "expected_count": 1,
         "must_contain_substrings": {"Kundenservicemitarbeiter"},
     },
+    "08_roles_by_job_family.rq": {
+        "expected_count": 7,
+        "must_contain_substrings": {"Data Engineer", "Engineering Director", "Software Engineer"},
+    },
+    "09_people_by_seniority.rq": {
+        "expected_count": 9,
+        "must_contain_names": {
+            "Alice Chen", "Brianna Lee", "David Patel",
+            "Gina Chen", "Harris Patel", "Olga Weber",
+            "Quinn Schmidt", "Tobias Wagner", "Ulrich Fischer",
+        },
+    },
+    "10_specific_local_role.rq": {
+        "expected_count": 1,
+        "must_contain_names": {"Kate Adler"},
+    },
+    "11_broadmatch_only_roles.rq": {
+        "expected_count": 2,
+        "must_contain_substrings": {"AreaVPOfSales", "PrincipalSWE"},
+    },
+    "12_software_agent_mappings.rq": {
+        "expected_count": 1,
+        "must_contain_substrings": {"LLM Mapper"},
+    },
 }
 
 

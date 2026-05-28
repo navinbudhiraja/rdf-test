@@ -1,0 +1,17 @@
+# Q8: All global roles in a given job family.
+#
+# Tests acme:hasJobFamily and the named job family IRIs added to the prompt.
+# Bind ?family to any acme:Family_* individual, e.g.:
+#   acme:Family_Engineering  acme:Family_Sales  acme:Family_Finance
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX acme:  <https://acme.example/ontology/>
+
+SELECT ?role ?label WHERE {
+  BIND(acme:Family_Engineering AS ?family)
+  ?role a acme:GlobalRole ;
+        acme:hasJobFamily ?family ;
+        skos:prefLabel ?label .
+  FILTER (lang(?label) = "en")
+}
+ORDER BY ?label

@@ -1,0 +1,17 @@
+# Q12: Software agents involved in mapping activities, with mapping counts.
+#
+# Tests the agent IRI pattern added to the prompt: software agents live
+# under <https://acme.example/agent/...> (not /person/), typed prov:SoftwareAgent.
+
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX acme: <https://acme.example/ontology/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?agentLabel (COUNT(?activity) AS ?mappingCount) WHERE {
+  ?activity a acme:MappingActivity ;
+            prov:wasAssociatedWith ?agent .
+  ?agent a prov:SoftwareAgent ;
+         rdfs:label ?agentLabel .
+}
+GROUP BY ?agentLabel
+ORDER BY DESC(?mappingCount)

@@ -378,6 +378,42 @@ Unmapped local roles (no SKOS mapping to the global catalog):
     FILTER (LCASE(lang(?localLabel)) IN ("en","en-gb","en-us","de"))
   }
 
+All global roles in a given job family (uses acme:hasJobFamily + named family IRI):
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  PREFIX acme: <https://acme.example/ontology/>
+  SELECT ?role ?label WHERE {
+    ?role a acme:GlobalRole ;
+          acme:hasJobFamily acme:Family_Engineering ;
+          skos:prefLabel ?label .
+    FILTER (lang(?label) = "en")
+  } ORDER BY ?label
+
+People currently in roles at a given seniority level (uses acme:hasSeniorityLevel + acme:L4):
+  PREFIX org:  <http://www.w3.org/ns/org#>
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+  PREFIX acme: <https://acme.example/ontology/>
+  PREFIX time: <http://www.w3.org/2006/time#>
+  SELECT ?personName ?localRoleLabel ?globalLabel WHERE {
+    ?gr a acme:GlobalRole ; acme:hasSeniorityLevel acme:L4 ; skos:prefLabel ?globalLabel .
+    ?lr skos:closeMatch|skos:broadMatch ?gr .
+    ?m a org:Membership ; org:role ?lr ; org:member ?person ; org:memberDuring ?iv .
+    FILTER NOT EXISTS { ?iv time:hasEnd ?e . }
+    ?person foaf:name ?personName .
+    ?lr skos:prefLabel ?localRoleLabel .
+    FILTER (lang(?globalLabel) = "en")
+    FILTER (LCASE(lang(?localRoleLabel)) IN ("en","en-gb","en-us","de"))
+  } ORDER BY ?personName
+
+Software agents and how many mapping activities each was involved in (aggregation):
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX acme: <https://acme.example/ontology/>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?agentLabel (COUNT(?activity) AS ?mappingCount) WHERE {
+    ?activity a acme:MappingActivity ; prov:wasAssociatedWith ?agent .
+    ?agent a prov:SoftwareAgent ; rdfs:label ?agentLabel .
+  } GROUP BY ?agentLabel ORDER BY DESC(?mappingCount)
+
 ## Rules
 - Always include the PREFIX declarations you use.
 - SELECT queries only (no ASK/CONSTRUCT/DESCRIBE).
