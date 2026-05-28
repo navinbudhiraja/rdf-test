@@ -27,6 +27,10 @@ esac
 export JAVA_HOME="${JAVA_HOME:-$HOME/java/jdk-21.0.11+10/Contents/Home}"
 export PATH="$JAVA_HOME/bin:$PATH"
 
+# Give the rewriter enough heap; G1GC handles large-object allocation better
+# than the default GC for Ontop's SPARQL-to-SQL term trees.
+export ONTOP_JAVA_ARGS="${ONTOP_JAVA_ARGS:--Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200}"
+
 if ! command -v java &>/dev/null; then
     echo "Error: Java not found. Run ./setup.sh first."
     exit 1

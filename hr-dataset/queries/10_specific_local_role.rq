@@ -1,0 +1,20 @@
+# Q10: People currently holding a specific local role by its exact IRI.
+#
+# Tests that the local role IRIs added to the prompt are correct and
+# resolvable. acmeUK:PeoplePartner is a role that would be hallucinated
+# as e.g. acmeUK:HRBusinessPartner without the prompt addition.
+
+PREFIX org:    <http://www.w3.org/ns/org#>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX acmeUK: <https://acme.example/uk/role/>
+
+SELECT ?personName WHERE {
+  ?m a org:Membership ;
+     org:role acmeUK:PeoplePartner ;
+     org:member ?person ;
+     org:memberDuring ?iv .
+  FILTER NOT EXISTS { ?iv time:hasEnd ?e . }
+  ?person foaf:name ?personName .
+}
+ORDER BY ?personName

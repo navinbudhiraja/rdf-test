@@ -206,19 +206,85 @@ to a single GLOBAL role catalog, which is in turn anchored to ESCO/ISCO occupati
   acme:GlobalRole       — canonical enterprise role (e.g. acmeG:SoftwareEngineerL4)
   acme:LocalRole        — a subsidiary's local job title (acmeUK:/acmeDE:/acmeUS:)
   acme:Subsidiary       — orgU:AcmeUK, orgU:AcmeDE, orgU:AcmeUS (orgU:AcmeGroup is the parent)
-  acme:JobFamily        — acme:Family_Engineering, acme:Family_Sales, … (8 families)
-  acme:SeniorityLevel   — acme:L1 … acme:L9 (acme:levelOrdinal 1..9)
+  acme:JobFamily        — 8 individuals in acme:JobFamilyScheme:
+    acme:Family_Engineering  acme:Family_Product  acme:Family_Sales  acme:Family_Marketing
+    acme:Family_Finance  acme:Family_People  acme:Family_Operations  acme:Family_CustomerSupport
+  acme:SeniorityLevel   — 9 named individuals (acme:levelOrdinal in parentheses):
+    acme:L1 "Entry" (1)    acme:L2 "Associate" (2)  acme:L3 "Mid" (3)
+    acme:L4 "Senior" (4)   acme:L5 "Staff" (5)      acme:L6 "Principal" (6)
+    acme:L7 "Director" (7) acme:L8 "VP" (8)         acme:L9 "Executive" (9)
   acme:MappingActivity  — provenance record for one local→global mapping
   org:Post              — a named seat in a subsidiary (e.g. post:uk_001)
   org:Membership        — n-ary link: person ↔ org ↔ role ↔ post ↔ time interval
   foaf:Person           — an employee (p:alice_01)
+
+## Global role catalog (acmeG: prefix)
+
+All roles are in acme:GlobalRoleScheme. "Broader" = skos:broader (more senior role).
+
+  Code                     Label                              Family            Level  Broader
+  SoftwareEngineerL3       Software Engineer, Level 3         Engineering       L3
+  SoftwareEngineerL4       Software Engineer, Level 4         Engineering       L4     SoftwareEngineerL3
+  SoftwareEngineerL5       Software Engineer, Level 5         Engineering       L5     SoftwareEngineerL4
+  EngineeringManagerL6     Engineering Manager, Level 6       Engineering       L6
+  EngineeringDirectorL7    Engineering Director, Level 7      Engineering       L7     EngineeringManagerL6
+  DataEngineerL4           Data Engineer, Level 4             Engineering       L4
+  DataScientistL4          Data Scientist, Level 4            Engineering       L4
+  ProductManagerL4         Product Manager, Level 4           Product           L4
+  SeniorProductManagerL5   Senior Product Manager, Level 5    Product           L5     ProductManagerL4
+  AccountExecutiveL3       Account Executive, Level 3         Sales             L3
+  SalesManagerL6           Sales Manager, Level 6             Sales             L6
+  VPSalesL8                VP of Sales, Level 8               Sales             L8     SalesManagerL6
+  MarketingManagerL5       Marketing Manager, Level 5         Marketing         L5
+  MarketingDirectorL7      Marketing Director, Level 7        Marketing         L7     MarketingManagerL5
+  FinancialAnalystL3       Financial Analyst, Level 3         Finance           L3
+  FinanceManagerL6         Finance Manager, Level 6           Finance           L6
+  HRBusinessPartnerL5      HR Business Partner, Level 5       People            L5
+  RecruiterL3              Recruiter, Level 3                 People            L3
+  OperationsManagerL6      Operations Manager, Level 6        Operations        L6
+  CustomerSupportRepL2     Customer Support Rep, Level 2      CustomerSupport   L2
+  CustomerSupportLeadL5    Customer Support Lead, Level 5     CustomerSupport   L5     CustomerSupportRepL2
+
+## Local roles
+
+Each subsidiary uses its own local role IRIs. Only the localname varies per row; apply the
+prefix shown. Labels carry the subsidiary's language tag (see Labels section below).
+
+AcmeUK (acmeUK:…, @en-GB):
+  SoftwareEngineer          SeniorSoftwareEngineer    LeadSoftwareEngineer
+  EngineeringManager        HeadOfEngineering         DataEngineer
+  ProductManager            SeniorProductManager      AccountManager
+  HeadOfMarketing           FinancialAnalyst          PeoplePartner
+  CustomerSuccessAssociate  OperationsLead
+
+AcmeDE (acmeDE:…, @de — German names):
+  SoftwareentwicklerII   SoftwareentwicklerIII  SoftwareentwicklerIV
+  Teamleiter             Entwicklungsleiter     DatenIngenieur
+  DataScientist          ProduktManager         Vertriebsmitarbeiter
+  Vertriebsleiter        MarketingManager       Finanzanalyst
+  PersonalReferent       KundenServiceMitarbeiter  ← intentionally unmapped (no SKOS link)
+
+AcmeUS (acmeUS:…, @en-US — uses abbreviations):
+  SWE_II           SWE_III          StaffSWE         PrincipalSWE (*)
+  EM               DirectorOfEngineering              DataEngineer
+  DataScientist    PM               SeniorPM          AE
+  RegionalSalesManager              AreaVPOfSales (*)
+  MarketingManager DirectorOfMarketing                FinancialAnalyst
+  FinanceManager   HRBP             TechnicalRecruiter CustomerSupportSpecialist
+
+(*) These two use skos:broadMatch instead of skos:closeMatch — see Mapping note below.
 
 ## Key properties
 
 Mapping (graded SKOS — NOT owl:sameAs):
   ?localRole  skos:closeMatch|skos:broadMatch  ?globalRole     # local → global
   ?globalRole skos:broadMatch|skos:closeMatch|skos:relatedMatch ?escoConcept  # global → ESCO/ISCO
-  most local→global links are skos:closeMatch; a few are skos:broadMatch.
+  Most local→global links are skos:closeMatch. Two AcmeUS roles use skos:broadMatch
+  because the local title is MORE senior than the global catalog entry (title inflation):
+    acmeUS:PrincipalSWE  skos:broadMatch acmeG:SoftwareEngineerL5  (confidence 0.78)
+    acmeUS:AreaVPOfSales skos:broadMatch acmeG:VPSalesL8           (confidence 0.65, in-review)
+  For ESCO links: skos:broadMatch means the global role is MORE SPECIFIC than the ESCO
+  concept — traverse FROM the global role TO the ESCO concept (not the reverse).
 
 Roles / labels:
   skos:prefLabel, skos:altLabel, skos:definition (on global roles), skos:inScheme
@@ -243,6 +309,8 @@ Mapping provenance:
 ## IRI patterns
   Global role:  acmeG:SoftwareEngineerL4        Local role: acmeUK:SeniorSoftwareEngineer
   Subsidiary:   orgU:AcmeUK                      Person: p:alice_01     Post: post:uk_001
+  Person agent: <https://acme.example/person/jordan-kim>    (prov:wasAssociatedWith)
+  SW agent:     <https://acme.example/agent/llm-mapper-v2>  (note /person/ vs /agent/)
 
 ## Labels and languages
 Labels carry language tags: AcmeUK and posts/orgs use @en-GB, AcmeDE uses @de
@@ -309,6 +377,42 @@ Unmapped local roles (no SKOS mapping to the global catalog):
     }
     FILTER (LCASE(lang(?localLabel)) IN ("en","en-gb","en-us","de"))
   }
+
+All global roles in a given job family (uses acme:hasJobFamily + named family IRI):
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  PREFIX acme: <https://acme.example/ontology/>
+  SELECT ?role ?label WHERE {
+    ?role a acme:GlobalRole ;
+          acme:hasJobFamily acme:Family_Engineering ;
+          skos:prefLabel ?label .
+    FILTER (lang(?label) = "en")
+  } ORDER BY ?label
+
+People currently in roles at a given seniority level (uses acme:hasSeniorityLevel + acme:L4):
+  PREFIX org:  <http://www.w3.org/ns/org#>
+  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+  PREFIX acme: <https://acme.example/ontology/>
+  PREFIX time: <http://www.w3.org/2006/time#>
+  SELECT ?personName ?localRoleLabel ?globalLabel WHERE {
+    ?gr a acme:GlobalRole ; acme:hasSeniorityLevel acme:L4 ; skos:prefLabel ?globalLabel .
+    ?lr skos:closeMatch|skos:broadMatch ?gr .
+    ?m a org:Membership ; org:role ?lr ; org:member ?person ; org:memberDuring ?iv .
+    FILTER NOT EXISTS { ?iv time:hasEnd ?e . }
+    ?person foaf:name ?personName .
+    ?lr skos:prefLabel ?localRoleLabel .
+    FILTER (lang(?globalLabel) = "en")
+    FILTER (LCASE(lang(?localRoleLabel)) IN ("en","en-gb","en-us","de"))
+  } ORDER BY ?personName
+
+Software agents and how many mapping activities each was involved in (aggregation):
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX acme: <https://acme.example/ontology/>
+  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?agentLabel (COUNT(?activity) AS ?mappingCount) WHERE {
+    ?activity a acme:MappingActivity ; prov:wasAssociatedWith ?agent .
+    ?agent a prov:SoftwareAgent ; rdfs:label ?agentLabel .
+  } GROUP BY ?agentLabel ORDER BY DESC(?mappingCount)
 
 ## Rules
 - Always include the PREFIX declarations you use.

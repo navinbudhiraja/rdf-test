@@ -1,0 +1,16 @@
+# Q11: Local roles that use skos:broadMatch to the global catalog
+#      but have no skos:closeMatch (title-inflated roles).
+#
+# Tests the broadMatch edge-case knowledge added to the prompt:
+# acmeUS:PrincipalSWE and acmeUS:AreaVPOfSales.
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX acme: <https://acme.example/ontology/>
+
+SELECT ?localRole ?globalRole WHERE {
+  ?localRole a acme:LocalRole ;
+             skos:broadMatch ?globalRole .
+  ?globalRole a acme:GlobalRole .
+  FILTER NOT EXISTS { ?localRole skos:closeMatch ?globalRole . }
+}
+ORDER BY ?localRole
