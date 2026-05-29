@@ -8,6 +8,10 @@ Natural Language → SPARQL + SQL query engine over a university dataset. A user
 - **university** — dual SPARQL + SQL, side-by-side (Ontop on :8080 + in-memory DuckDB).
 - **hr** — the AcmeCorp multi-subsidiary HR knowledge graph, **SPARQL-only** (Ontop on :8081). HR data is modeled relationally (just like a real HRIS) and Ontop maps it to RDF; the rich SKOS/property-path graph is queried with SPARQL, so there is no hand-written SQL side. See "Second Dataset: AcmeCorp HR" below.
 
+There is also a **Web Chat UI** for the HR dataset — a claude.ai-style conversational
+interface that drives the MCP server's `ask_hr` / `get_hr_schema` tools and renders
+answers as NL summaries + tables + charts. See "Web Chat UI (HR)" below.
+
 ---
 
 ## Architecture
@@ -31,6 +35,29 @@ Ontop at localhost:8080    In-memory DuckDB
     src/slack_bot.py   (Slack bot via Socket Mode)
 ```
 
+The **HR Web Chat** sits on top of the MCP server rather than the translator directly:
+
+```
+Browser (src/static/index.html — vanilla JS + Chart.js)
+    ↓  POST /chat {session_id, message}
+src/web.py (FastAPI)
+    ├→ src/chat_engine.py   Claude agent loop (Anthropic Messages API + extended
+    │                       thinking, retries, decomposition, clarifying questions)
+    ├→ src/mcp_client.py    persistent stdio session → src/mcp_server.py
+    │                       (only ask_hr / get_hr_schema are exposed to the model)
+    └→ src/hr_markdown.py   parse ask_hr markdown → {sparql, columns, rows, error}
+    ↓
+NDJSON event stream (live): thinking_delta · tool_start · tool_result{card} ·
+                            text_delta · done
+    ↓
+Browser renders incrementally: streaming reasoning → "Querying HR…" status →
+                               table/chart cards → streaming summary bubble
+```
+
+The turn **streams** — `chat_engine.stream_turn` is an async generator and `POST /chat`
+returns NDJSON, so the UI updates as thinking/queries/results/answer arrive rather than
+blocking until the end. `run_turn` (used by tests) is a non-streaming wrapper over it.
+
 ---
 
 ## Key Source Files
@@ -42,6 +69,11 @@ Ontop at localhost:8080    In-memory DuckDB
 | `src/nl_query.py` | CLI entry point; `--dataset {university,hr}` flag; language-aware display (side-by-side for university, SPARQL-only for hr) |
 | `src/mcp_server.py` | FastMCP server. University tools: `ask_university`, `run_sql`, `get_schema`. HR tools: `ask_hr`, `run_sparql_hr`, `get_hr_schema` |
 | `src/slack_bot.py` | Slack bot (Socket Mode); university dual pipeline (unchanged) |
+| `src/web.py` | FastAPI backend for the HR Web Chat. `lifespan` starts the MCP client; `POST /chat` **streams** one agent turn as NDJSON over an in-memory per-`session_id` history; serves `static/index.html`. **Run with a single worker** (one MCP subprocess + shared in-memory sessions) |
+| `src/chat_engine.py` | Claude agent loop (raw Anthropic Messages API, `claude-sonnet-4-6`). `stream_turn` (async generator, streams thinking/tool/text events) + `run_turn` (non-streaming wrapper for tests). Extended thinking, `max_retries` + tool-level retry, decomposition into multiple `ask_hr` calls, clarifying questions. Filters tools to `ask_hr`/`get_hr_schema`; caches the system+tools prefix |
+| `src/mcp_client.py` | `MCPManager`: persistent stdio session to `mcp_server.py`, kept alive for the app via a single background task (anyio same-task enter/exit); `call_tool` serialized with a lock |
+| `src/hr_markdown.py` | `parse_ask_hr(md)`: turns the deterministic `ask_hr` markdown into `{sparql, columns, rows, rowCount, error}` for the UI (the markdown is the only data channel — we use only the two HR tools) |
+| `src/static/index.html` | Single-file chat UI: vanilla JS + Chart.js (CDN, no build). Summary bubble, collapsible "Show reasoning", per-result table with **Table\|Chart** toggle, "View SPARQL" |
 | `src/sparql_executor.py` | HTTP POST to an Ontop SPARQL endpoint (`execute(sparql, endpoint=…)`, default :8080); returns pandas DataFrame |
 | `src/sql_executor.py` | Executes SQL against in-memory DuckDB loaded from `data/university.sql` (university only); in-memory avoids JDBC file-lock conflict with Ontop |
 | `ontop/university.obda` / `.ttl` / `database.properties` | University OBDA mappings, ontology, JDBC config (→ `university.ddb`) |
@@ -57,6 +89,7 @@ Ontop at localhost:8080    In-memory DuckDB
 | `setup.sh` | One-time setup: downloads Ontop v5.5.0 CLI + DuckDB JDBC; builds `university.ddb` and `hr.ddb` |
 | `start_ontop.sh` | `./start_ontop.sh [university\|hr]` — starts the chosen Ontop endpoint (university :8080, hr :8081). Scopes its `pkill` to the dataset's OBDA filename so the two endpoints coexist |
 | `query.sh` / `query_hr.sh` | Thin wrappers around `python src/nl_query.py [--dataset hr] "…"` |
+| `start_web.sh` | `./start_web.sh [port]` — starts the HR Web Chat (uvicorn) using the project venv; warns if the HR endpoint (:8081) isn't up. Default port 8000 |
 
 ---
 
@@ -218,6 +251,21 @@ bash query_hr.sh "Show the reporting chain for Alice Chen"
 ```bash
 python src/mcp_server.py
 ```
+
+### Web Chat UI (HR)
+Requires the HR Ontop endpoint (`./start_ontop.sh hr`) and `ANTHROPIC_API_KEY`.
+```bash
+./start_web.sh                       # uses the venv; open http://localhost:8000/
+./start_web.sh 9000                  # optional: choose a different port
+# (equivalent to: uvicorn web:app --app-dir src — single worker)
+```
+A claude.ai-style chat over the HR dataset. The backend (`src/web.py`) drives the MCP
+server's `ask_hr` / `get_hr_schema` tools through `src/chat_engine.py`; the model plans
+with extended thinking, decomposes complex questions into multiple `ask_hr` calls,
+retries transient failures, and asks clarifying questions when ambiguous. Each answer
+is an interpretive NL summary plus rendered tables/charts (parsed from `ask_hr`'s
+markdown by `src/hr_markdown.py`). See "Web Chat UI (HR)" under the architecture notes.
+**One worker only** — there is a single shared MCP subprocess and in-memory session state.
 
 ### Slack bot
 ```bash
