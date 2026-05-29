@@ -66,6 +66,33 @@ python src/nl_query.py --dataset hr "Which employees are software engineers acro
 ./query_hr.sh "Which role mappings need review?"
 ```
 
+## Web Chat (HR)
+
+A claude.ai-style chat interface for the **HR** dataset, served from a small FastAPI
+backend. Ask questions in plain English and get back a natural-language summary plus
+rendered **tables and charts**. Under the hood it drives the project's MCP server
+(`ask_hr` / `get_hr_schema` only) — the model plans with step-by-step thinking,
+breaks complex questions into multiple `ask_hr` queries, retries transient failures,
+and asks clarifying questions when a request is ambiguous.
+
+Start the HR Ontop endpoint and the web server (two terminals):
+
+```bash
+./start_ontop.sh hr                  # http://localhost:8081/  (keep open)
+./start_web.sh                       # http://localhost:8000/  (uses the venv; single worker)
+```
+
+(`start_web.sh` takes an optional port, e.g. `./start_web.sh 9000`, and is just a
+wrapper around `uvicorn web:app --app-dir src` using the project's `.venv`.)
+
+Then open <http://localhost:8000/> and chat. Requires `ANTHROPIC_API_KEY` in `.env`.
+Each result card shows the data as a table with a **Table / Chart** toggle (bar chart
+when there's a category + a numeric column) and a collapsible **View SPARQL**; a
+**Show reasoning** disclosure reveals the model's thinking.
+
+> Run a **single** worker: there is one shared MCP subprocess and in-memory
+> conversation state, so multiple workers would not share sessions.
+
 ## Slack Bot
 
 The Slack bot lets anyone in your workspace ask natural language questions by DMing the bot or @mentioning it in a channel. It uses Socket Mode — no public URL or port forwarding needed.
@@ -143,6 +170,7 @@ The Turtle is the source of truth — `hr-dataset/build_relational.py` converts 
 | `src/nl_query.py` | CLI entry point; `--dataset {university,hr}` flag |
 | `src/mcp_server.py` | MCP server. University tools: `ask_university`, `run_sql`, `get_schema`. HR tools: `ask_hr`, `run_sparql_hr`, `get_hr_schema` |
 | `src/slack_bot.py` | Slack bot (Socket Mode) — DMs and @mentions trigger the university NL→SPARQL+SQL pipeline |
+| `src/web.py` · `src/chat_engine.py` · `src/mcp_client.py` · `src/hr_markdown.py` · `src/static/index.html` | HR **Web Chat**: FastAPI `/chat` → Claude agent loop → persistent MCP client (`ask_hr`/`get_hr_schema`) → markdown parser; vanilla-JS + Chart.js UI |
 | `ontop/university.obda` / `.ttl` | University OBDA mappings + OWL 2 QL ontology |
 | `ontop/hr.obda` / `hr.ttl` | HR OBDA mappings + custom TBox (built on `org:`, `foaf:`, `skos:`, `prov:`, `time:`) |
 | `data/university.sql` / `data/hr.sql` | Source data per dataset (`hr.sql` is generated from `hr-dataset/*.ttl`) |

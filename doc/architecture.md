@@ -1,8 +1,10 @@
 # Architecture
 
 End-to-end picture of the system as it stands today: two datasets (university dual
-SPARQL+SQL, HR SPARQL-only), three entry points (CLI / MCP / Slack), one shared
-query engine, two Ontop endpoints.
+SPARQL+SQL, HR SPARQL-only), entry points (CLI / MCP / Slack / HR Web Chat), one shared
+query engine, two Ontop endpoints. The **HR Web Chat** is layered on top of the MCP
+server (it is an MCP *client*) rather than calling the engine directly — see
+"HR Web Chat" below.
 
 ## System Overview
 
@@ -110,6 +112,8 @@ holds it.
 |---|---|---|---|
 | Slack ↔ Bot | Bot opens outbound WebSocket to Slack | WSS (Socket Mode) | `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` |
 | Claude Desktop ↔ MCP server | Local IPC | stdio | Local only |
+| HR Web Chat (`web.py`) ↔ MCP server | Local IPC | stdio (persistent `MCPManager`) | Local only |
+| Browser ↔ HR Web Chat | Local HTTP | `POST /chat` (NDJSON stream) | `uvicorn web:app` on `:8000` |
 | Translator → Claude API | Outbound HTTPS | REST / JSON | `ANTHROPIC_API_KEY` |
 | SPARQL executor → Ontop (university) | Local HTTP | HTTP POST | Ontop running on `:8080` |
 | SPARQL executor → Ontop (HR) | Local HTTP | HTTP POST | Ontop running on `:8081` |
@@ -161,3 +165,80 @@ User (terminal)     nl_query.py          Engine
 
 Only one branch runs (no SQL executor, no second thread). The output is a
 single results table rather than the university's side-by-side comparison.
+
+---
+
+## HR Web Chat
+
+A claude.ai-style conversational UI for the HR dataset. Unlike the CLI/Slack paths,
+it does **not** call the engine directly — it is an MCP *client* that reaches the HR
+data only through the MCP server's `ask_hr` / `get_hr_schema` tools. A backend Claude
+agent loop orchestrates those tools (with extended thinking, retries, decomposition,
+and clarifying questions), and `ask_hr`'s markdown is parsed back into structured rows
+so the browser can render tables and charts.
+
+```mermaid
+flowchart TB
+    subgraph CLOUD["☁️  External APIs"]
+        CA["Anthropic Claude API<br/>claude-sonnet-4-6<br/>(thinking + prompt caching)"]
+    end
+
+    subgraph BROWSER["🌐  Browser"]
+        UI["src/static/index.html<br/>vanilla JS + Chart.js<br/>summary · table · chart · SPARQL"]
+    end
+
+    subgraph LAPTOP["💻  Your Laptop"]
+        subgraph WEBAPP["FastAPI backend (single worker)"]
+            WEB["src/web.py<br/>POST /chat · in-memory SESSIONS"]
+            CE["src/chat_engine.py<br/>agent loop · tools=ask_hr,get_hr_schema<br/>retries · decomposition · clarify"]
+            MC["src/mcp_client.py<br/>MCPManager (persistent stdio)"]
+            HM["src/hr_markdown.py<br/>parse_ask_hr → cols/rows/sparql/error"]
+        end
+
+        MCP["src/mcp_server.py<br/>(MCP server, stdio)"]
+        OTH["Ontop endpoint<br/>localhost:8081"]
+        HBD[("hr.ddb")]
+    end
+
+    UI <-->|"POST /chat (NDJSON stream)"| WEB
+    WEB --> CE
+    CE <-->|"messages + tools"| CA
+    CE -->|"call_tool"| MC
+    MC <-->|"stdio"| MCP
+    CE -.->|"raw ask_hr markdown"| HM
+    MCP -->|"ask_hr → translate + execute"| OTH
+    OTH -- JDBC --> HBD
+    CE <-->|"HTTPS ANTHROPIC_API_KEY"| CA
+```
+
+`web.py` keeps one `MCPManager` (one `mcp_server.py` subprocess) alive for the app and
+one in-memory conversation per `session_id` — hence the **single-worker** requirement.
+Only `ask_hr` / `get_hr_schema` are exposed to the model; the server's other tools are
+filtered out in `chat_engine.to_anthropic_tools`.
+
+### Sequence: one chat turn (streamed)
+
+`stream_turn` is an async generator; `POST /chat` forwards each event as one NDJSON
+line, so the browser updates **as the turn unfolds** rather than after it finishes.
+
+```
+Browser            web.py            chat_engine        MCP server        Ontop :8081
+   │                  │                   │                  │                 │
+   │─ POST /chat ────►│─ stream_turn() ──►│                  │                 │
+   │◄─ session ───────│                   │─ messages.stream (thinking) ─► Claude API
+   │◄─ thinking_delta… (reasoning streams live)              │                 │
+   │                  │                   │◄─ tool_use × N (ask_hr …)            │
+   │◄─ tool_start ────│   (UI: "Querying HR: …")             │                 │
+   │                  │                   │─ call_tool(ask_hr) ─►│─ translate+execute ─►│
+   │                  │                   │  parse_ask_hr → card │◄── markdown ──│
+   │◄─ tool_result ───│   (table/chart card appears now)     │                 │
+   │                  │                   │─ messages.stream (tool_result) ► Claude API
+   │◄─ text_delta… (summary streams token-by-token)          │                 │
+   │◄─ done ──────────│                   │                  │                 │
+```
+
+A compound question yields several `ask_hr` `tool_use` blocks (one per sub-question),
+each streamed as its own `tool_result` card as it returns; the final `text_delta`
+stream synthesizes them. A transient HR-endpoint failure is retried in `chat_engine`
+before the error is handed back to the model; an ambiguous question streams a plain
+clarifying question with no tool call (`done.needs_clarification = true`).

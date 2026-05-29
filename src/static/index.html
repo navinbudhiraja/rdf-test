@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AcmeCorp HR — Chat</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --user:#2b5cff; --bot:#222634;
+          --line:#2a2f3d; --txt:#e6e8ee; --muted:#9aa3b2; --accent:#6ea8fe; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+         background:var(--bg); color:var(--txt); height:100vh; display:flex; flex-direction:column; }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); font-weight:600; }
+  header small { color:var(--muted); font-weight:400; margin-left:8px; }
+  #log { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+  .row { display:flex; }
+  .row.user { justify-content:flex-end; }
+  .bubble { max-width:min(820px,92%); padding:12px 16px; border-radius:14px; line-height:1.5;
+            white-space:pre-wrap; word-wrap:break-word; }
+  .user .bubble { background:var(--user); color:#fff; border-bottom-right-radius:4px; }
+  .bot .bubble  { background:var(--bot); border-bottom-left-radius:4px; }
+  .col { display:flex; flex-direction:column; gap:10px; max-width:min(900px,94%); }
+  details.think { font-size:13px; color:var(--muted); }
+  details.think summary { cursor:pointer; }
+  details.think pre { white-space:pre-wrap; background:#11131b; padding:10px; border-radius:8px;
+                      border:1px solid var(--line); margin-top:6px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .toggle { display:flex; gap:6px; margin-bottom:10px; }
+  .toggle button { background:#222634; color:var(--txt); border:1px solid var(--line);
+                   padding:4px 12px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .toggle button.active { background:var(--accent); color:#0b0e16; border-color:var(--accent); }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--accent); font-weight:600; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color:#fff; }
+  th .arrow { font-size:11px; color:var(--muted); }
+  .meta { color:var(--muted); font-size:12px; margin-top:6px; }
+  .status { color:var(--muted); font-size:13px; font-style:italic; }
+  .status .dots span { animation:blink 1.2s infinite both; }
+  .err { color:#ffb4b4; }
+  /* rendered-markdown assistant bubble */
+  .bubble.md { white-space:normal; }
+  .bubble.md > :first-child { margin-top:0; }
+  .bubble.md > :last-child { margin-bottom:0; }
+  .bubble.md p { margin:0 0 10px; }
+  .bubble.md strong { color:#fff; font-weight:700; }
+  .bubble.md em { font-style:italic; }
+  .bubble.md code { background:#11131b; border:1px solid var(--line); border-radius:5px;
+                    padding:1px 5px; font-size:.9em; }
+  .bubble.md h3, .bubble.md h4, .bubble.md h5 { margin:14px 0 8px; line-height:1.3; }
+  .bubble.md h3 { font-size:1.15em; } .bubble.md h4 { font-size:1.05em; }
+  .bubble.md ul, .bubble.md ol { margin:0 0 10px; padding-left:22px; }
+  .bubble.md li { margin:3px 0; }
+  .bubble.md hr { border:none; border-top:1px solid var(--line); margin:12px 0; }
+  .bubble.md a { color:var(--accent); }
+  details.sparql { margin-top:8px; }
+  details.sparql summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  details.sparql pre { white-space:pre-wrap; background:#11131b; padding:10px; border-radius:8px;
+                       border:1px solid var(--line); margin-top:6px; font-size:13px; overflow-x:auto; }
+  .chartwrap { position:relative; height:320px; }
+  form { display:flex; gap:10px; padding:14px 20px; border-top:1px solid var(--line); }
+  #q { flex:1; background:var(--panel); color:var(--txt); border:1px solid var(--line);
+       border-radius:10px; padding:12px 14px; font-size:15px; }
+  #send { background:var(--user); color:#fff; border:none; border-radius:10px; padding:0 20px;
+          font-size:15px; cursor:pointer; }
+  #send:disabled { opacity:.5; cursor:default; }
+  .dots span { animation:blink 1.2s infinite both; }
+  .dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+</style>
+</head>
+<body>
+  <header>AcmeCorp HR <small>— ask in plain English; answers come back as summaries, tables &amp; charts</small></header>
+  <div id="log"></div>
+  <form id="form">
+    <input id="q" autocomplete="off" placeholder="e.g. How many people work in each subsidiary?" />
+    <button id="send" type="submit">Send</button>
+  </form>
+
+<script>
+const log = document.getElementById('log');
+const form = document.getElementById('form');
+const q = document.getElementById('q');
+const send = document.getElementById('send');
+let sessionId = null;
+let chartSeq = 0;
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// Minimal, safe markdown -> HTML for assistant text. HTML is escaped FIRST, so the
+// only tags ever produced are the known-safe ones we introduce below (no XSS path).
+function renderMarkdown(src){
+  let text = esc(src);
+  const codes = [];
+  text = text.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000'+(codes.length-1)+'\u0000'; });
+  const inline = s => s
+    .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const html = text.split(/\n{2,}/).map(block => {
+    const lines = block.split('\n');
+    const t = block.trim();
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) return '<hr>';
+    const h = t.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { const lvl = Math.min(6, h[1].length + 2); return `<h${lvl}>${inline(h[2])}</h${lvl}>`; }
+    if (lines.every(l => /^\s*[-*•]\s+/.test(l)))
+      return '<ul>' + lines.map(l => `<li>${inline(l.replace(/^\s*[-*•]\s+/, ''))}</li>`).join('') + '</ul>';
+    if (lines.every(l => /^\s*\d+[.)]\s+/.test(l)))
+      return '<ol>' + lines.map(l => `<li>${inline(l.replace(/^\s*\d+[.)]\s+/, ''))}</li>`).join('') + '</ol>';
+    return '<p>' + inline(lines.join('\n')).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+  return html.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[+i]}</code>`);
+}
+
+function addUser(text){
+  const row = el('div','row user');
+  const b = el('div','bubble'); b.textContent = text;
+  row.appendChild(b); log.appendChild(row); scroll();
+}
+
+function el(tag, cls){ const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function scroll(){ log.scrollTop = log.scrollHeight; }
+
+// Turn a SPARQL variable name into a human-readable column header.
+// e.g. personName -> "Person Name", localRoleLabel -> "Local Role",
+//      employee_count -> "Employee Count", totalGlobalRoles -> "Total Global Roles".
+function prettyLabel(col){
+  let s = String(col).replace(/[_-]+/g, ' ').replace(/Label$/i, '').trim();
+  if(!s) s = String(col);
+  s = s.replace(/([a-z\d])([A-Z])/g, '$1 $2')      // camelCase boundary
+       .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')  // ACRONYMWord boundary
+       .replace(/\s+/g, ' ').trim();
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Decide if a result is chartable: exactly one numeric column + >=1 label column.
+function chartSpec(columns, rows){
+  if(!rows.length) return null;
+  const numeric = columns.filter(c => rows.every(r => {
+    const v = r[c]; return v !== '' && v != null && isFinite(Number(v));
+  }));
+  const labels = columns.filter(c => !numeric.includes(c));
+  if(numeric.length === 1 && labels.length >= 1){
+    return { labelCol: labels[0], valueCol: numeric[0] };
+  }
+  return null;
+}
+
+function buildTable(columns, rows){
+  const tbl = el('table');
+  const thead = el('thead'), htr = el('tr');
+  const tb = el('tbody');
+
+  // Columns whose every non-empty value parses as a number sort numerically.
+  const numericCols = new Set(columns.filter(c => rows.length && rows.every(r => {
+    const v = r[c]; return v !== '' && v != null && isFinite(Number(v));
+  })));
+
+  let sortCol = null, sortDir = 1;  // 1 = ascending, -1 = descending
+
+  const renderBody = () => {
+    let data = rows;
+    if (sortCol !== null) {
+      const numeric = numericCols.has(sortCol);
+      data = rows.slice().sort((a, b) => {
+        const x = a[sortCol], y = b[sortCol];
+        const xe = x === '' || x == null, ye = y === '' || y == null;
+        if (xe || ye) return xe && ye ? 0 : (xe ? 1 : -1);  // blanks sort last
+        const cmp = numeric ? Number(x) - Number(y)
+          : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' });
+        return cmp * sortDir;
+      });
+    }
+    tb.innerHTML = '';
+    data.forEach(r => {
+      const tr = el('tr');
+      columns.forEach(c => { const td = el('td'); td.textContent = r[c] ?? ''; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+  };
+
+  const arrows = {};
+  columns.forEach(c => {
+    const th = el('th'); th.className = 'sortable';
+    th.textContent = prettyLabel(c);
+    th.title = 'Sort by ' + prettyLabel(c);
+    const arrow = el('span', 'arrow'); arrows[c] = arrow; th.appendChild(arrow);
+    th.onclick = () => {
+      sortDir = sortCol === c ? -sortDir : 1;
+      sortCol = c;
+      Object.values(arrows).forEach(a => a.textContent = '');
+      arrow.textContent = sortDir === 1 ? ' ▲' : ' ▼';
+      renderBody();
+    };
+    htr.appendChild(th);
+  });
+
+  thead.appendChild(htr); tbl.appendChild(thead);
+  tbl.appendChild(tb);
+  renderBody();
+  return tbl;
+}
+
+function buildCard(tr){
+  const card = el('div','card');
+
+  if(tr.error){
+    const e = el('div','err');
+    e.textContent = '⚠ Results unavailable: ' + tr.error +
+      (/cannot connect/i.test(tr.error) ? '  (is Ontop running on :8081?)' : '');
+    card.appendChild(e);
+  }
+
+  if(tr.columns && tr.columns.length && tr.rows && tr.rows.length){
+    const spec = chartSpec(tr.columns, tr.rows);
+    const tableView = buildTable(tr.columns, tr.rows);
+    let chartView = null;
+
+    if(spec){
+      const toggle = el('div','toggle');
+      const tBtn = el('button'); tBtn.textContent = 'Table'; tBtn.className = 'active';
+      const cBtn = el('button'); cBtn.textContent = 'Chart';
+      toggle.appendChild(tBtn); toggle.appendChild(cBtn);
+      card.appendChild(toggle);
+
+      chartView = el('div','chartwrap'); chartView.style.display = 'none';
+      const canvas = el('canvas'); chartView.appendChild(canvas);
+
+      card.appendChild(tableView);
+      card.appendChild(chartView);
+
+      let chart = null;
+      const draw = () => {
+        if(chart) return;
+        chart = new Chart(canvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: tr.rows.map(r => r[spec.labelCol]),
+            datasets: [{ label: prettyLabel(spec.valueCol),
+              data: tr.rows.map(r => Number(r[spec.valueCol])),
+              backgroundColor: '#6ea8fe' }]
+          },
+          options: { responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{labels:{color:'#e6e8ee'}}},
+            scales:{ x:{ticks:{color:'#9aa3b2'}}, y:{ticks:{color:'#9aa3b2'}, beginAtZero:true} } }
+        });
+      };
+      tBtn.onclick = () => { tableView.style.display=''; chartView.style.display='none';
+        tBtn.classList.add('active'); cBtn.classList.remove('active'); };
+      cBtn.onclick = () => { tableView.style.display='none'; chartView.style.display='';
+        cBtn.classList.add('active'); tBtn.classList.remove('active'); draw(); };
+    } else {
+      card.appendChild(tableView);
+    }
+
+    const meta = el('div','meta');
+    meta.textContent = tr.rowCount + ' row' + (tr.rowCount === 1 ? '' : 's');
+    card.appendChild(meta);
+  } else if(!tr.error){
+    const m = el('div','meta'); m.textContent = 'No rows returned.'; card.appendChild(m);
+  }
+
+  if(tr.sparql){
+    const d = el('details','sparql');
+    const s = el('summary'); s.textContent = 'View SPARQL';
+    const pre = el('pre'); pre.textContent = tr.sparql;
+    d.appendChild(s); d.appendChild(pre); card.appendChild(d);
+  }
+  return card;
+}
+
+// Stream one turn from /chat (NDJSON), updating the UI as events arrive.
+async function streamChat(text){
+  const row = el('div','row bot');
+  const col = el('div','col');
+  row.appendChild(col); log.appendChild(row);
+
+  // Reasoning panel (created lazily on first thinking delta).
+  let think = null, thinkPre = null, thinkSum = null, thinkText = '';
+  // Live status line (shows immediately so a slow turn never looks frozen).
+  const status = el('div','status');
+  status.innerHTML = 'Thinking<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+  col.appendChild(status);
+  // Text bubbles: chatter emitted BEFORE a query stays where it appears (above the
+  // result cards); a tool call ends the current bubble, so the summary that streams
+  // in AFTER the queries starts a fresh bubble appended below the cards.
+  // Order: chatter → table → summary.
+  let curBubble = null, curText = '', totalText = '', cards = 0;
+  const newBubble = () => { curBubble = el('div','bubble md'); curText = ''; col.appendChild(curBubble); };
+  scroll();
+
+  const ensureThink = () => {
+    if(think) return;
+    think = el('details','think'); think.open = true;
+    thinkSum = el('summary'); thinkSum.textContent = 'Reasoning…';
+    thinkPre = el('pre');
+    think.appendChild(thinkSum); think.appendChild(thinkPre);
+    col.insertBefore(think, status);
+  };
+
+  const handle = (ev) => {
+    switch(ev.type){
+      case 'session': sessionId = ev.session_id; break;
+      case 'thinking_delta':
+        ensureThink(); thinkText += ev.text; thinkPre.textContent = thinkText; scroll(); break;
+      case 'tool_start':
+        status.textContent = ev.question ? ('🔎 Querying HR: ' + ev.question) : '📚 Loading HR schema…';
+        // End the current bubble (any chatter so far stays put, above the cards);
+        // the next text starts a fresh bubble that lands below the result cards.
+        curBubble = null;
+        scroll(); break;
+      case 'tool_result':
+        status.textContent = '';
+        col.appendChild(buildCard(ev.card)); cards++; scroll(); break;
+      case 'text_delta':
+        status.textContent = '';
+        if(!curBubble) newBubble();
+        curText += ev.text; totalText += ev.text;
+        curBubble.innerHTML = renderMarkdown(curText); scroll(); break;
+      case 'error':
+        status.textContent = '';
+        if(!curBubble) newBubble();
+        curBubble.classList.remove('md'); curBubble.textContent = 'Error: ' + ev.message; break;
+      case 'done': break;
+    }
+  };
+
+  const resp = await fetch('/chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ message:text, session_id:sessionId })
+  });
+  if(!resp.ok || !resp.body){
+    handle({ type:'error', message:'HTTP ' + resp.status });
+  } else {
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for(;;){
+      const { value, done } = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, { stream:true });
+      let nl;
+      while((nl = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if(line.trim()) handle(JSON.parse(line));
+      }
+    }
+    if(buf.trim()) handle(JSON.parse(buf));
+  }
+
+  // Finalize: drop the status line; tidy the reasoning panel; ensure something shows.
+  status.remove();
+  if(think){ think.open = false; thinkSum.textContent = 'Show reasoning'; }
+  if(!totalText && !cards){ newBubble(); curBubble.textContent = '(no answer)'; }
+  scroll();
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = q.value.trim();
+  if(!text) return;
+  addUser(text);
+  q.value = ''; send.disabled = true; q.disabled = true;
+  try {
+    await streamChat(text);
+  } catch(err){
+    const row = el('div','row bot'); const b = el('div','bubble');
+    b.textContent = 'Network error: ' + err.message;
+    row.appendChild(b); log.appendChild(row); scroll();
+  } finally {
+    send.disabled = false; q.disabled = false; q.focus();
+  }
+});
+
+q.focus();
+</script>
+</body>
+</html>
