@@ -170,7 +170,7 @@ The Turtle is the source of truth — `hr-dataset/build_relational.py` converts 
 | `src/nl_query.py` | CLI entry point; `--dataset {university,hr}` flag |
 | `src/mcp_server.py` | MCP server. University tools: `ask_university`, `run_sql`, `get_schema`. HR tools: `ask_hr`, `run_sparql_hr`, `get_hr_schema` |
 | `src/slack_bot.py` | Slack bot (Socket Mode) — DMs and @mentions trigger the university NL→SPARQL+SQL pipeline |
-| `src/web.py` · `src/chat_engine.py` · `src/mcp_client.py` · `src/hr_markdown.py` · `src/static/index.html` | HR **Web Chat**: FastAPI `/chat` → Claude agent loop → persistent MCP client (`ask_hr`/`get_hr_schema`) → markdown parser; vanilla-JS + Chart.js UI |
+| `src/web.py` · `src/chat_engine.py` · `src/hr_query.py` · `src/static/index.html` | HR **Web Chat**: FastAPI `/chat` → Claude agent loop (`ask_hr`/`get_hr_schema`) → in-process HR pipeline returning structured rows; vanilla-JS + Chart.js UI |
 | `ontop/university.obda` / `.ttl` | University OBDA mappings + OWL 2 QL ontology |
 | `ontop/hr.obda` / `hr.ttl` | HR OBDA mappings + custom TBox (built on `org:`, `foaf:`, `skos:`, `prov:`, `time:`) |
 | `data/university.sql` / `data/hr.sql` | Source data per dataset (`hr.sql` is generated from `hr-dataset/*.ttl`) |

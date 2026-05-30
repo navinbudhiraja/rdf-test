@@ -112,7 +112,7 @@ holds it.
 |---|---|---|---|
 | Slack ↔ Bot | Bot opens outbound WebSocket to Slack | WSS (Socket Mode) | `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` |
 | Claude Desktop ↔ MCP server | Local IPC | stdio | Local only |
-| HR Web Chat (`web.py`) ↔ MCP server | Local IPC | stdio (persistent `MCPManager`) | Local only |
+| HR Web Chat (`chat_engine.py`) → HR pipeline | In-process call (`hr_query.run` via `asyncio.to_thread`) | Python | Local only |
 | Browser ↔ HR Web Chat | Local HTTP | `POST /chat` (NDJSON stream) | `uvicorn web:app` on `:8000` |
 | Translator → Claude API | Outbound HTTPS | REST / JSON | `ANTHROPIC_API_KEY` |
 | SPARQL executor → Ontop (university) | Local HTTP | HTTP POST | Ontop running on `:8080` |
@@ -170,12 +170,12 @@ single results table rather than the university's side-by-side comparison.
 
 ## HR Web Chat
 
-A claude.ai-style conversational UI for the HR dataset. Unlike the CLI/Slack paths,
-it does **not** call the engine directly — it is an MCP *client* that reaches the HR
-data only through the MCP server's `ask_hr` / `get_hr_schema` tools. A backend Claude
-agent loop orchestrates those tools (with extended thinking, retries, decomposition,
-and clarifying questions), and `ask_hr`'s markdown is parsed back into structured rows
-so the browser can render tables and charts.
+A claude.ai-style conversational UI for the HR dataset. A backend Claude agent loop
+orchestrates two tools, `ask_hr` / `get_hr_schema` (with extended thinking, retries,
+decomposition, and clarifying questions). The tools run the HR pipeline **in-process**
+(`src/hr_query.py`) — there is no MCP subprocess; `src/mcp_server.py` remains the MCP
+surface for Claude Desktop. `ask_hr` returns structured rows directly, so the browser
+renders tables and charts with no markdown round-trip.
 
 ```mermaid
 flowchart TB
@@ -191,11 +191,9 @@ flowchart TB
         subgraph WEBAPP["FastAPI backend (single worker)"]
             WEB["src/web.py<br/>POST /chat · in-memory SESSIONS"]
             CE["src/chat_engine.py<br/>agent loop · tools=ask_hr,get_hr_schema<br/>retries · decomposition · clarify"]
-            MC["src/mcp_client.py<br/>MCPManager (persistent stdio)"]
-            HM["src/hr_markdown.py<br/>parse_ask_hr → cols/rows/sparql/error"]
+            HQ["src/hr_query.py<br/>run() → cols/rows/sparql/error (in-process)"]
         end
 
-        MCP["src/mcp_server.py<br/>(MCP server, stdio)"]
         OTH["Ontop endpoint<br/>localhost:8081"]
         HBD[("hr.ddb")]
     end
@@ -203,18 +201,15 @@ flowchart TB
     UI <-->|"POST /chat (NDJSON stream)"| WEB
     WEB --> CE
     CE <-->|"messages + tools"| CA
-    CE -->|"call_tool"| MC
-    MC <-->|"stdio"| MCP
-    CE -.->|"raw ask_hr markdown"| HM
-    MCP -->|"ask_hr → translate + execute"| OTH
+    CE -->|"ask_hr (asyncio.to_thread)"| HQ
+    HQ -->|"translate + execute SPARQL"| OTH
     OTH -- JDBC --> HBD
     CE <-->|"HTTPS ANTHROPIC_API_KEY"| CA
 ```
 
-`web.py` keeps one `MCPManager` (one `mcp_server.py` subprocess) alive for the app and
-one in-memory conversation per `session_id` — hence the **single-worker** requirement.
-Only `ask_hr` / `get_hr_schema` are exposed to the model; the server's other tools are
-filtered out in `chat_engine.to_anthropic_tools`.
+`web.py` keeps one in-memory conversation per `session_id` — hence the **single-worker**
+requirement. Only `ask_hr` / `get_hr_schema` are defined to the model (`chat_engine.HR_TOOLS`);
+their handlers call `hr_query` directly rather than reaching the full MCP server.
 
 ### Sequence: one chat turn (streamed)
 
@@ -222,15 +217,15 @@ filtered out in `chat_engine.to_anthropic_tools`.
 line, so the browser updates **as the turn unfolds** rather than after it finishes.
 
 ```
-Browser            web.py            chat_engine        MCP server        Ontop :8081
+Browser            web.py            chat_engine        hr_query          Ontop :8081
    │                  │                   │                  │                 │
    │─ POST /chat ────►│─ stream_turn() ──►│                  │                 │
    │◄─ session ───────│                   │─ messages.stream (thinking) ─► Claude API
    │◄─ thinking_delta… (reasoning streams live)              │                 │
    │                  │                   │◄─ tool_use × N (ask_hr …)            │
    │◄─ tool_start ────│   (UI: "Querying HR: …")             │                 │
-   │                  │                   │─ call_tool(ask_hr) ─►│─ translate+execute ─►│
-   │                  │                   │  parse_ask_hr → card │◄── markdown ──│
+   │                  │                   │─ run() (to_thread) ─►│─ translate+execute ─►│
+   │                  │                   │◄─ card {cols/rows} ──│◄── DataFrame ─│
    │◄─ tool_result ───│   (table/chart card appears now)     │                 │
    │                  │                   │─ messages.stream (tool_result) ► Claude API
    │◄─ text_delta… (summary streams token-by-token)          │                 │

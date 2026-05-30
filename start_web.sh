@@ -8,8 +8,8 @@
 # Requires ANTHROPIC_API_KEY in .env and the HR Ontop endpoint on :8081
 # (start it in another terminal:  ./start_ontop.sh hr).
 #
-# Runs in the foreground — Ctrl+C to stop. Single worker on purpose: there is one
-# shared MCP subprocess and in-memory conversation state.
+# Runs in the foreground — Ctrl+C to stop. Single worker on purpose: the in-memory
+# conversation state is not shared across workers.
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"

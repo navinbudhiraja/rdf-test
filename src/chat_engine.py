@@ -1,10 +1,15 @@
 """The Claude agent loop behind the HR web chat.
 
 A turn is: take the running conversation, let Claude (with extended thinking) decide
-when to call the MCP tools `ask_hr` / `get_hr_schema`, run them, feed results back,
-and repeat until Claude produces a final natural-language answer. We use the raw
-Anthropic Messages API (not the Agent SDK) so we can capture each `ask_hr` call's raw
-markdown and parse tables/charts out of it (see `hr_markdown.parse_ask_hr`).
+when to call the HR tools `ask_hr` / `get_hr_schema`, run them IN-PROCESS (via
+`hr_query`), feed results back, and repeat until Claude produces a final
+natural-language answer. We use the raw Anthropic Messages API (not the Agent SDK)
+so we can stream thinking/text and capture each `ask_hr` call's structured result
+(table/chart payload) for the UI.
+
+`ask_hr` returns structured data directly (`hr_query.run`) — no MCP subprocess and no
+markdown round-trip. (`mcp_server.py` is still the MCP surface for Claude Desktop;
+the web app just calls the same pipeline in-process.)
 
 Behaviours the system prompt + loop provide:
 - step-by-step planning (extended thinking, optionally surfaced to the UI),
@@ -19,17 +24,44 @@ import asyncio
 
 from anthropic import AsyncAnthropic
 
-from hr_markdown import parse_ask_hr
+import hr_query
 
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 4096
 THINKING_BUDGET = 2048
 MAX_ITERATIONS = 10          # decomposition can fan out into several ask_hr calls
-TOOL_RETRY_LIMIT = 2         # transient Ontop/MCP failures retried per call
-ALLOWED_TOOLS = {"ask_hr", "get_hr_schema"}
+TOOL_RETRY_LIMIT = 2         # transient Ontop failures retried per call
 _TRANSIENT_HINTS = ("cannot connect", "timed out", "timeout", "connection")
 
 _client = AsyncAnthropic(max_retries=4)  # exponential backoff for 429/5xx/network
+
+# Hand-written tool schemas (sorted by name for stable prompt caching). The web app
+# exposes exactly these two HR tools — they map to `hr_query` functions, not MCP.
+HR_TOOLS = [
+    {
+        "name": "ask_hr",
+        "description": (
+            "Answer ONE focused natural-language question about the AcmeCorp HR "
+            "dataset. Generates SPARQL, runs it against the HR knowledge graph, and "
+            "returns the query plus a results table. Ask single-intent questions; "
+            "decompose compound questions into separate calls."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"question": {"type": "string"}},
+            "required": ["question"],
+        },
+    },
+    {
+        "name": "get_hr_schema",
+        "description": (
+            "Return the AcmeCorp HR ontology reference — prefixes, classes, "
+            "properties, and IRI patterns. Call it when unsure of the vocabulary "
+            "needed to phrase a question."
+        ),
+        "input_schema": {"type": "object", "properties": {}},
+    },
+]
 
 HR_SYSTEM = """\
 You are an analyst assistant for the **AcmeCorp HR knowledge graph**. You answer \
@@ -46,8 +78,8 @@ to other posts. Some role mappings are low-confidence or unapproved and "need re
 - `get_hr_schema()` — returns the ontology reference (prefixes, classes, relationships). \
 Call it when you are unsure of the vocabulary needed to phrase a question.
 - `ask_hr(question)` — answers ONE natural-language HR question: it generates SPARQL, \
-runs it against the HR graph, and returns markdown containing the query and a results \
-table. Ask focused, single-intent questions.
+runs it against the HR graph, and returns the query and a results table. Ask focused, \
+single-intent questions.
 
 ## How to work
 - Plan before querying. For a compound question, DECOMPOSE it into focused \
@@ -75,49 +107,40 @@ so a table in your text would be a confusing duplicate. Refer to figures inline 
 """
 
 
-def to_anthropic_tools(mcp_tools) -> list[dict]:
-    """Convert MCP tool definitions to Anthropic tool schema, filtered to the two
-    HR tools so the model can never reach the server's other tools."""
-    tools = [
-        {
-            "name": t.name,
-            "description": t.description or "",
-            "input_schema": t.inputSchema,
-        }
-        for t in mcp_tools
-        if t.name in ALLOWED_TOOLS
-    ]
-    tools.sort(key=lambda t: t["name"])  # stable order for prompt caching
-    return tools
-
-
 def _is_transient(error: str | None) -> bool:
     return bool(error) and any(h in error.lower() for h in _TRANSIENT_HINTS)
 
 
-async def _call_tool_with_retry(mcp, name: str, arguments: dict) -> tuple[str, dict | None]:
-    """Call an MCP tool, returning (raw_markdown, parsed-or-None).
+def _card_to_text(card: dict) -> str:
+    """Render an ask_hr result as compact markdown for the MODEL to read (one-way —
+    the UI uses the structured card directly, so this is never parsed back)."""
+    if card["error"]:
+        return f"> Error: {card['error']}"
+    columns, rows = card["columns"], card["rows"]
+    if not rows:
+        return "_No rows returned._"
+    header = "| " + " | ".join(columns) + " |"
+    sep = "| " + " | ".join("---" for _ in columns) + " |"
+    body = [
+        "| " + " | ".join(str(r.get(c, "")) for c in columns) + " |"
+        for r in rows
+    ]
+    n = card["rowCount"]
+    return "\n".join([header, sep, *body]) + f"\n\n_{n} row{'s' if n != 1 else ''}_"
 
-    `parsed` is only produced for `ask_hr`. Transient HR-endpoint failures are retried
-    a few times with backoff before the (error) result is handed back to the model.
-    """
-    last_raw = ""
+
+async def _ask_hr_with_retry(question: str) -> dict:
+    """Run `ask_hr` in-process, retrying a few times with backoff on transient HR
+    endpoint failures before handing the (error) card back to the model."""
     for attempt in range(TOOL_RETRY_LIMIT + 1):
-        try:
-            raw = await mcp.call_tool(name, arguments)
-        except Exception as exc:  # subprocess died / protocol error
-            return (f"> Unavailable: {exc}", parse_ask_hr(f"## SPARQL Results\n\n> Unavailable: {exc}\n"))
-        last_raw = raw
-        if name != "ask_hr":
-            return raw, None
-        parsed = parse_ask_hr(raw)
-        if not _is_transient(parsed.get("error")) or attempt == TOOL_RETRY_LIMIT:
-            return raw, parsed
+        card = await asyncio.to_thread(hr_query.run, question)  # blocking pipeline off the loop
+        if not _is_transient(card.get("error")) or attempt == TOOL_RETRY_LIMIT:
+            return card
         await asyncio.sleep(0.5 * (attempt + 1))  # brief backoff, then retry
-    return last_raw, parse_ask_hr(last_raw)
+    return card
 
 
-async def stream_turn(mcp, messages: list[dict], tools: list[dict]):
+async def stream_turn(messages: list[dict]):
     """Run one user turn, yielding progress events as they happen so the UI can
     update live instead of waiting for the whole turn. Mutates `messages` (assistant
     + tool_result turns are appended so history persists across turns).
@@ -138,7 +161,7 @@ async def stream_turn(mcp, messages: list[dict], tools: list[dict]):
             max_tokens=MAX_TOKENS,
             thinking={"type": "enabled", "budget_tokens": THINKING_BUDGET},
             system=[{"type": "text", "text": HR_SYSTEM, "cache_control": {"type": "ephemeral"}}],
-            tools=tools,
+            tools=HR_TOOLS,
             messages=messages,
         ) as stream:
             async for event in stream:
@@ -164,28 +187,30 @@ async def stream_turn(mcp, messages: list[dict], tools: list[dict]):
             if getattr(block, "type", None) != "tool_use":
                 continue
             args = dict(block.input or {})
+            is_ask = block.name == "ask_hr"
             yield {
                 "type": "tool_start",
                 "tool": block.name,
-                "question": args.get("question") if block.name == "ask_hr" else None,
+                "question": args.get("question") if is_ask else None,
             }
-            raw, parsed = await _call_tool_with_retry(mcp, block.name, args)
+
+            if is_ask:
+                card = await _ask_hr_with_retry(args.get("question", ""))
+                result_text = _card_to_text(card)
+                is_error = bool(card["error"])
+                emitted_cards += 1
+                yield {"type": "tool_result", "card": {"tool": "ask_hr", **card}}
+            elif block.name == "get_hr_schema":
+                result_text, is_error = hr_query.SCHEMA, False
+            else:  # the model can only see HR_TOOLS, so this is defensive
+                result_text, is_error = f"Unknown tool: {block.name}", True
+
             tool_result_blocks.append({
                 "type": "tool_result",
                 "tool_use_id": block.id,
-                "content": raw,
-                "is_error": bool(parsed and parsed.get("error")),
+                "content": result_text,
+                "is_error": is_error,
             })
-            if block.name == "ask_hr" and parsed is not None:
-                emitted_cards += 1
-                yield {"type": "tool_result", "card": {
-                    "tool": "ask_hr",
-                    "sparql": parsed["sparql"],
-                    "columns": parsed["columns"],
-                    "rows": parsed["rows"],
-                    "rowCount": parsed["rowCount"],
-                    "error": parsed["error"],
-                }}
 
         messages.append({"role": "user", "content": tool_result_blocks})
     else:
@@ -200,11 +225,11 @@ async def stream_turn(mcp, messages: list[dict], tools: list[dict]):
     }
 
 
-async def run_turn(mcp, messages: list[dict], tools: list[dict]) -> dict:
+async def run_turn(messages: list[dict]) -> dict:
     """Non-streaming convenience wrapper around `stream_turn` — collects the events
     into a single result dict (used by tests / any non-streaming caller)."""
     text, thinking, cards, needs = "", "", [], False
-    async for ev in stream_turn(mcp, messages, tools):
+    async for ev in stream_turn(messages):
         t = ev["type"]
         if t == "text_delta":
             text += ev["text"]

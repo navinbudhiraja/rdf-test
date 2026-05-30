@@ -1,11 +1,11 @@
 """FastAPI backend for the AcmeCorp HR web chat.
 
 Serves a single-page chat UI and a `/chat` endpoint. Each request runs one turn of
-the Claude agent loop (`chat_engine.run_turn`) over a persistent MCP session
-(`mcp_client.MCPManager`) that exposes only the `ask_hr` / `get_hr_schema` tools.
-Conversation state is kept in-memory per `session_id`.
+the Claude agent loop (`chat_engine.stream_turn`), which answers HR questions by
+calling the pipeline IN-PROCESS (`hr_query`) — no MCP subprocess. Conversation state
+is kept in-memory per `session_id`.
 
-Run (single worker — there is one MCP subprocess and shared in-memory state):
+Run (single worker — the `SESSIONS` dict is in-memory and not shared across workers):
 
     uvicorn web:app --app-dir src
 
@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import uuid
 from contextlib import asynccontextmanager
 
@@ -29,8 +28,7 @@ from pydantic import BaseModel
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
-from chat_engine import stream_turn, to_anthropic_tools  # noqa: E402 (after load_dotenv)
-from mcp_client import MCPManager  # noqa: E402
+from chat_engine import stream_turn  # noqa: E402 (after load_dotenv)
 
 _STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
@@ -43,16 +41,7 @@ SESSIONS: dict[str, dict] = {}
 async def lifespan(app: FastAPI):
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env).")
-    # Launch the MCP server with the SAME interpreter running the web app so it has
-    # the project's dependencies available.
-    mcp = MCPManager(python_executable=sys.executable)
-    await mcp.start()
-    app.state.mcp = mcp
-    app.state.tools = to_anthropic_tools(mcp.tools)
-    try:
-        yield
-    finally:
-        await mcp.stop()
+    yield
 
 
 app = FastAPI(title="AcmeCorp HR Chat", lifespan=lifespan)
@@ -74,7 +63,7 @@ async def chat(req: ChatRequest):
     async def events():
         yield json.dumps({"type": "session", "session_id": sid}) + "\n"
         try:
-            async for ev in stream_turn(app.state.mcp, session["messages"], app.state.tools):
+            async for ev in stream_turn(session["messages"]):
                 yield json.dumps(ev) + "\n"
         except Exception as exc:  # surface backend failures to the client
             yield json.dumps({"type": "error", "message": str(exc)}) + "\n"
